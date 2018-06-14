@@ -1,12 +1,12 @@
 //! Global variables.
 
 use ir::immediates::Offset32;
-use ir::{ExternalName, GlobalVar};
+use ir::{ExternalName, GlobalValue};
 use std::fmt;
 
-/// Information about a global variable declaration.
+/// Information about a global valueiable declaration.
 #[derive(Clone)]
-pub enum GlobalVarData {
+pub enum GlobalValueData {
     /// Variable is part of the VM context struct, it's address is a constant offset from the VM
     /// context pointer.
     VMContext {
@@ -14,14 +14,14 @@ pub enum GlobalVarData {
         offset: Offset32,
     },
 
-    /// Variable is part of a struct pointed to by another global variable.
+    /// Variable is part of a struct pointed to by another global valueiable.
     ///
-    /// The `base` global variable is assumed to contain a pointer to a struct. This global
+    /// The `base` global valueiable is assumed to contain a pointer to a struct. This global
     /// variable lives at an offset into the struct. The memory must be accessible, and
     /// naturally aligned to hold a pointer value.
     Deref {
-        /// The base pointer global variable.
-        base: GlobalVar,
+        /// The base pointer global valueiable.
+        base: GlobalValue,
 
         /// Byte offset to be added to the pointer loaded from `base`.
         offset: Offset32,
@@ -41,22 +41,22 @@ pub enum GlobalVarData {
     },
 }
 
-impl GlobalVarData {
-    /// Assume that `self` is an `GlobalVarData::Sym` and return its name.
+impl GlobalValueData {
+    /// Assume that `self` is an `GlobalValueData::Sym` and return its name.
     pub fn symbol_name(&self) -> &ExternalName {
         match *self {
-            GlobalVarData::Sym { ref name, .. } => name,
+            GlobalValueData::Sym { ref name, .. } => name,
             _ => panic!("only symbols have names"),
         }
     }
 }
 
-impl fmt::Display for GlobalVarData {
+impl fmt::Display for GlobalValueData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            GlobalVarData::VMContext { offset } => write!(f, "vmctx{}", offset),
-            GlobalVarData::Deref { base, offset } => write!(f, "deref({}){}", base, offset),
-            GlobalVarData::Sym {
+            GlobalValueData::VMContext { offset } => write!(f, "vmctx{}", offset),
+            GlobalValueData::Deref { base, offset } => write!(f, "deref({}){}", base, offset),
+            GlobalValueData::Sym {
                 ref name,
                 colocated,
             } => {
