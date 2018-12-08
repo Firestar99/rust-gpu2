@@ -28,18 +28,12 @@ extern crate cranelift_codegen;
 extern crate cranelift_entity;
 extern crate cranelift_frontend;
 extern crate cranelift_wasm;
-extern crate errno;
 extern crate region;
 extern crate wasmtime_environ;
+extern crate wasmtime_runtime;
 #[cfg(not(feature = "std"))]
 #[macro_use]
 extern crate alloc;
-#[macro_use]
-extern crate lazy_static;
-extern crate libc;
-#[macro_use]
-extern crate memoffset;
-extern crate cast;
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
@@ -47,30 +41,13 @@ extern crate failure_derive;
 mod action;
 mod code;
 mod export;
-mod get;
-mod imports;
-mod instance;
-mod invoke;
-mod libcalls;
 mod link;
-mod memory;
-mod mmap;
-mod sig_registry;
-mod signalhandlers;
-mod table;
-mod traphandlers;
-mod vmcontext;
 mod world;
 
 pub use action::{ActionError, ActionOutcome, RuntimeValue};
 pub use code::Code;
-pub use export::{ExportValue, NullResolver, Resolver};
-pub use get::{get, get_by_index};
-pub use instance::Instance;
-pub use invoke::{invoke, invoke_by_index, invoke_start_function};
+pub use export::{Export, NullResolver, Resolver};
 pub use link::link_module;
-pub use traphandlers::{call_wasm, LookupCodeSegment, RecordTrap, Unwind};
-pub use vmcontext::{VMContext, VMFunctionBody, VMGlobal, VMMemory, VMTable};
 pub use world::InstanceWorld;
 
 #[cfg(not(feature = "std"))]
