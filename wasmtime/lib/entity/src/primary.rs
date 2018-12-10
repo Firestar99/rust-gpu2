@@ -1,4 +1,5 @@
 //! Densely numbered entity references as mapping keys.
+use boxed_slice::BoxedSlice;
 use iter::{Iter, IterMut};
 use keys::Keys;
 use std::iter::FromIterator;
@@ -21,7 +22,8 @@ use EntityRef;
 /// Note that `PrimaryMap` doesn't implement `Deref` or `DerefMut`, which would allow
 /// `&PrimaryMap<K, V>` to convert to `&[V]`. One of the main advantages of `PrimaryMap` is
 /// that it only allows indexing with the distinct `EntityRef` key type, so converting to a
-/// plain slice would make it easier to use incorrectly.
+/// plain slice would make it easier to use incorrectly. To make a slice of a `PrimaryMap`, use
+/// `into_boxed_slice`.
 #[derive(Debug, Clone)]
 pub struct PrimaryMap<K, V>
 where
@@ -131,6 +133,11 @@ where
     /// Reserves the minimum capacity for exactly `additional` more elements to be inserted.
     pub fn reserve_exact(&mut self, additional: usize) {
         self.elems.reserve_exact(additional)
+    }
+
+    /// Consumes this `PrimaryMap` and produces a `BoxedSlice`.
+    pub fn into_boxed_slice(self) -> BoxedSlice<K, V> {
+        unsafe { BoxedSlice::<K, V>::from_raw(Box::<[V]>::into_raw(self.elems.into_boxed_slice())) }
     }
 }
 
@@ -378,6 +385,7 @@ mod tests {
         let mut m: PrimaryMap<E, usize> = PrimaryMap::new();
         m.push(12);
         m.push(33);
+
         let n = m.values().collect::<PrimaryMap<E, _>>();
         assert!(m.len() == n.len());
         for (me, ne) in m.values().zip(n.values()) {
