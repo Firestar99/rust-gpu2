@@ -23,7 +23,7 @@ fuzz_target!(|data: &[u8]| {
     let isa = isa_builder.finish(settings::Flags::new(flag_builder));
     let mut module = Module::new();
     let environment = ModuleEnvironment::new(&*isa, &mut module);
-    let translation = match environment.translate(&data) {
+    let translation = match environment.translate(data) {
         Ok(translation) => translation,
         Err(_) => return,
     };
