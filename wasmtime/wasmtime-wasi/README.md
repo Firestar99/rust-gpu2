@@ -1,5 +1,5 @@
 This is the `wasmtime-wasi` crate, which implements the
-WebAssembly System Interface (WASI) API.
+WebAssembly System Interface (WASI) API in Rust.
 
 WASI is greatly inspired by and directly derived from [CloudABI].
 It differs in that it has aspirations to expand to a greater
