@@ -1,5 +1,6 @@
 test regalloc
 target riscv32
+feature !"basic-blocks"
 
 ; Test the coalescer.
 ; regex: V=v\d+
