@@ -24,7 +24,7 @@ namespace Wasmtime.Tests
         [Fact]
         public void ItHasNoEnvironmentByDefault()
         {
-            using var instance = Fixture.Module.Instantiate(new Wasi(Fixture.Module.Store));
+            using var instance = Fixture.Module.Instantiate(new Wasi(Fixture.Module.Store, "wasi_snapshot_preview1"));
             dynamic inst = instance;
 
             var memory = instance.Externs.Memories[0];
@@ -43,7 +43,7 @@ namespace Wasmtime.Tests
                 {"VERY", "COOL"},
             };
 
-            var wasi = new WasiBuilder()
+            var wasi = new WasiBuilder("wasi_snapshot_preview1")
                 .WithEnvironmentVariables(env.Select(kvp => (kvp.Key, kvp.Value)))
                 .Build(Fixture.Module.Store);
 
@@ -67,7 +67,7 @@ namespace Wasmtime.Tests
         [Fact]
         public void ItInheritsEnvironment()
         {
-            var wasi = new WasiBuilder()
+            var wasi = new WasiBuilder("wasi_snapshot_preview1")
                 .WithInheritedEnvironment()
                 .Build(Fixture.Module.Store);
 
@@ -83,7 +83,7 @@ namespace Wasmtime.Tests
         [Fact]
         public void ItHasNoArgumentsByDefault()
         {
-            using var instance = Fixture.Module.Instantiate(new Wasi(Fixture.Module.Store));
+            using var instance = Fixture.Module.Instantiate(new Wasi(Fixture.Module.Store, "wasi_snapshot_preview1"));
             dynamic inst = instance;
 
             var memory = instance.Externs.Memories[0];
@@ -103,7 +103,7 @@ namespace Wasmtime.Tests
                 "COOL"
             };
 
-            var wasi = new WasiBuilder()
+            var wasi = new WasiBuilder("wasi_snapshot_preview1")
                 .WithArgs(args)
                 .Build(Fixture.Module.Store);
 
@@ -127,7 +127,7 @@ namespace Wasmtime.Tests
         [Fact]
         public void ItInheritsArguments()
         {
-            var wasi = new WasiBuilder()
+            var wasi = new WasiBuilder("wasi_snapshot_preview1")
                 .WithInheritedArgs()
                 .Build(Fixture.Module.Store);
 
@@ -148,7 +148,7 @@ namespace Wasmtime.Tests
             using var file = new TempFile();
             File.WriteAllText(file.Path, MESSAGE);
 
-            var wasi = new WasiBuilder()
+            var wasi = new WasiBuilder("wasi_snapshot_preview1")
                 .WithStandardInput(file.Path)
                 .Build(Fixture.Module.Store);
 
@@ -173,7 +173,7 @@ namespace Wasmtime.Tests
 
             using var file = new TempFile();
 
-            var builder = new WasiBuilder();
+            var builder = new WasiBuilder("wasi_snapshot_preview1");
             if (fd == 1)
             {
                 builder.WithStandardOutput(file.Path);
@@ -206,7 +206,7 @@ namespace Wasmtime.Tests
 
             using var file = new TempFile();
 
-            var wasi = new WasiBuilder()
+            var wasi = new WasiBuilder("wasi_snapshot_preview1")
                 .WithPreopenedDirectory(Path.GetDirectoryName(file.Path), "/foo")
                 .Build(Fixture.Module.Store);
 
