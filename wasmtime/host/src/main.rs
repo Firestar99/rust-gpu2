@@ -5,7 +5,6 @@ use wasmtime::{
     component::{Component, Linker},
     Config, Engine, Store,
 };
-use wit_component::ComponentEncoder;
 
 fn main() -> Result<()> {
     let input = PathBuf::from(
@@ -14,26 +13,13 @@ fn main() -> Result<()> {
             .get(1)
             .context("must provide an input file")?,
     );
-    let input = std::fs::read(input).context("reading input")?;
-
-    let adapter =
-        PathBuf::from(env!("OUT_DIR")).join("wasm32-wasi/release/wasi_snapshot_preview1.wasm");
-
-    let component = ComponentEncoder::default()
-        .module(input.as_slice())
-        .context("pull any custom sections from module")?
-        .validate(true)
-        .adapter_file(&adapter)
-        .context("wasi adapter")?
-        .encode()
-        .context("encoding module to component")?;
 
     let mut config = Config::new();
     config.wasm_backtrace_details(wasmtime::WasmBacktraceDetails::Enable);
     config.wasm_component_model(true);
 
     let engine = Engine::new(&config)?;
-    let component = Component::from_binary(&engine, &component)?;
+    let component = Component::from_file(&engine, &input)?;
     let mut linker = Linker::new(&engine);
     add_to_linker(&mut linker, |x| x)?;
 
