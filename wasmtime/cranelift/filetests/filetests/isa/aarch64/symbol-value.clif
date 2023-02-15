@@ -11,6 +11,6 @@ block0:
 }
 
 ; block0:
-;   ldr x0, 8 ; b 12 ; data TestCase(%my_global) + 0
+;   load_ext_name x0, TestCase(%my_global)+0
 ;   ret
 
