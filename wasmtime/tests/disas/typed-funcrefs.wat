@@ -1,6 +1,6 @@
 ;;! target = "x86_64"
 ;;! test = "optimize"
-;;! flags = [ "-Wfunction-references=y" ]
+;;! flags = [ "-Wfunction-references=y", "-Otable-lazy-init=y" ]
 
 ;; This test is meant to simulate how typed funcrefs in a table may be
 ;; used for ICs (inline caches) in a Wasm module compiled from a dynamic
