@@ -116,6 +116,11 @@ pub enum ArmArchitecture {
 pub enum Aarch64Architecture {
     Aarch64,
     Aarch64be,
+    /// AArch64 with ILP32 ABI (32-bit pointers, 64-bit registers and ISA).
+    /// Used by Apple Watch from Series 4 onward via the `arm64_32-apple-watchos`
+    /// target. The `_32` suffix is part of Apple/LLVM's architecture name.
+    #[allow(non_camel_case_types)]
+    Arm64_32,
 }
 
 // #[cfg_attr(feature = "rust_1_40", non_exhaustive)]
@@ -352,7 +357,9 @@ impl Aarch64Architecture {
     /// Test if this architecture uses the Thumb instruction set.
     pub fn is_thumb(self) -> bool {
         match self {
-            Aarch64Architecture::Aarch64 | Aarch64Architecture::Aarch64be => false,
+            Aarch64Architecture::Aarch64
+            | Aarch64Architecture::Aarch64be
+            | Aarch64Architecture::Arm64_32 => false,
         }
     }
 
@@ -363,10 +370,13 @@ impl Aarch64Architecture {
     /// Return the pointer bit width of this target's architecture.
     ///
     /// This function is only aware of the CPU architecture so it is not aware
-    /// of ilp32 ABIs.
+    /// of ilp32 ABIs in general — but Apple's `arm64_32` is treated as its own
+    /// architecture variant rather than via an environment, so it does report
+    /// `U32` here.
     pub fn pointer_width(self) -> PointerWidth {
         match self {
             Aarch64Architecture::Aarch64 | Aarch64Architecture::Aarch64be => PointerWidth::U64,
+            Aarch64Architecture::Arm64_32 => PointerWidth::U32,
         }
     }
 
@@ -375,6 +385,7 @@ impl Aarch64Architecture {
         match self {
             Aarch64Architecture::Aarch64 => Endianness::Little,
             Aarch64Architecture::Aarch64be => Endianness::Big,
+            Aarch64Architecture::Arm64_32 => Endianness::Little,
         }
     }
 
@@ -385,6 +396,7 @@ impl Aarch64Architecture {
         match self {
             Aarch64 => Cow::Borrowed("aarch64"),
             Aarch64be => Cow::Borrowed("aarch64_be"),
+            Arm64_32 => Cow::Borrowed("arm64_32"),
         }
     }
 }
@@ -1260,6 +1272,7 @@ impl FromStr for Aarch64Architecture {
             "aarch64" => Aarch64,
             "arm64" => Aarch64,
             "aarch64_be" => Aarch64be,
+            "arm64_32" => Arm64_32,
             _ => return Err(()),
         })
     }
@@ -1786,7 +1799,7 @@ mod tests {
             "aarch64-unknown-uefi",
             "aarch64-uwp-windows-msvc",
             "aarch64-wrs-vxworks",
-            //"arm64_32-apple-watchos", // TODO
+            "arm64_32-apple-watchos",
             //"arm64e-apple-darwin", // TODO
             "amdgcn-amd-amdhsa",
             "amdgcn-amd-amdhsa-amdgiz",
