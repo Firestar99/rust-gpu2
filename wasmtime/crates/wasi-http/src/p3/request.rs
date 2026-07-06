@@ -1,9 +1,8 @@
 use crate::p3::bindings::http::types::ErrorCode;
 use crate::p3::body::{Body, BodyExt as _, GuestBody};
 use crate::p3::{HttpError, HttpResult, WasiHttpCtxView, WasiHttpView};
-use crate::{FieldMap, get_content_length};
+use crate::{FieldMap, RequestOptions, get_content_length};
 use bytes::Bytes;
-use core::time::Duration;
 use http::header::HOST;
 use http::uri::{Authority, PathAndQuery, Scheme};
 use http::{HeaderValue, Method, Uri};
@@ -13,17 +12,6 @@ use std::sync::Arc;
 use tokio::sync::oneshot;
 use tracing::debug;
 use wasmtime::AsContextMut;
-
-/// The concrete type behind a `wasi:http/types.request-options` resource.
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct RequestOptions {
-    /// How long to wait for a connection to be established.
-    pub connect_timeout: Option<Duration>,
-    /// How long to wait for the first byte of the response body.
-    pub first_byte_timeout: Option<Duration>,
-    /// How long to wait between frames of the response body.
-    pub between_bytes_timeout: Option<Duration>,
-}
 
 /// The concrete type behind a `wasi:http/types.request` resource.
 pub struct Request {
@@ -272,6 +260,7 @@ pub async fn default_send_request(
     use core::future::poll_fn;
     use core::pin::{Pin, pin};
     use core::task::{Poll, ready};
+    use core::time::Duration;
     use tokio::io::{AsyncRead, AsyncWrite};
     use tokio::net::TcpStream;
 
