@@ -1,7 +1,7 @@
 //! Implementation of the `wasi:http/types` interface's various body types.
 
-use crate::FieldMap;
 use crate::p2::bindings::http::types;
+use crate::{Error, FieldMap};
 use bytes::Bytes;
 use http_body::{Body, Frame};
 use http_body_util::BodyExt;
@@ -9,8 +9,6 @@ use http_body_util::combinators::UnsyncBoxBody;
 use std::future::Future;
 use std::mem;
 use std::task::{Context, Poll};
-#[cfg(feature = "default-send-request")]
-use std::time::Duration;
 use std::{pin::Pin, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 use wasmtime::format_err;
@@ -18,10 +16,10 @@ use wasmtime_wasi::p2::{InputStream, OutputStream, Pollable, StreamError};
 use wasmtime_wasi::runtime::{AbortOnDropJoinHandle, poll_noop};
 
 /// Common type for incoming bodies.
-pub type HyperIncomingBody = UnsyncBoxBody<Bytes, types::ErrorCode>;
+pub type HyperIncomingBody = UnsyncBoxBody<Bytes, Error>;
 
 /// Common type for outgoing bodies.
-pub type HyperOutgoingBody = UnsyncBoxBody<Bytes, types::ErrorCode>;
+pub type HyperOutgoingBody = UnsyncBoxBody<Bytes, Error>;
 
 /// The concrete type behind a `was:http/types.incoming-body` resource.
 #[derive(Debug)]
@@ -85,74 +83,6 @@ enum IncomingBodyState {
     InBodyStream(oneshot::Receiver<StreamEnd>),
 }
 
-/// Small wrapper around [`HyperIncomingBody`] which adds a timeout to every frame.
-#[derive(Debug)]
-#[cfg(feature = "default-send-request")]
-pub(crate) struct BodyWithTimeout<B> {
-    /// Underlying stream that frames are coming from.
-    inner: B,
-    /// Currently active timeout that's reset between frames.
-    timeout: Pin<Box<tokio::time::Sleep>>,
-    /// Whether or not `timeout` needs to be reset on the next call to
-    /// `poll_frame`.
-    reset_sleep: bool,
-    /// Maximal duration between when a frame is first requested and when it's
-    /// allowed to arrive.
-    between_bytes_timeout: Duration,
-}
-
-#[cfg(feature = "default-send-request")]
-impl<B> BodyWithTimeout<B> {
-    pub(crate) fn new(inner: B, between_bytes_timeout: Duration) -> BodyWithTimeout<B> {
-        BodyWithTimeout {
-            inner,
-            between_bytes_timeout,
-            reset_sleep: true,
-            timeout: Box::pin(wasmtime_wasi::runtime::with_ambient_tokio_runtime(|| {
-                tokio::time::sleep(Duration::new(0, 0))
-            })),
-        }
-    }
-}
-
-#[cfg(feature = "default-send-request")]
-impl<B> Body for BodyWithTimeout<B>
-where
-    B: Body<Error = types::ErrorCode> + Unpin,
-{
-    type Data = B::Data;
-    type Error = types::ErrorCode;
-
-    fn poll_frame(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Frame<B::Data>, types::ErrorCode>>> {
-        let me = Pin::into_inner(self);
-
-        // If the timeout timer needs to be reset, do that now relative to the
-        // current instant. Otherwise test the timeout timer and see if it's
-        // fired yet and if so we've timed out and return an error.
-        if me.reset_sleep {
-            me.timeout
-                .as_mut()
-                .reset(tokio::time::Instant::now() + me.between_bytes_timeout);
-            me.reset_sleep = false;
-        }
-
-        // Register interest in this context on the sleep timer, and if the
-        // sleep elapsed that means that we've timed out.
-        if let Poll::Ready(()) = me.timeout.as_mut().poll(cx) {
-            return Poll::Ready(Some(Err(types::ErrorCode::ConnectionReadTimeout)));
-        }
-
-        // Without timeout business now handled check for the frame. If a frame
-        // arrives then the sleep timer will be reset on the next frame.
-        let result = Pin::new(&mut me.inner).poll_frame(cx);
-        me.reset_sleep = result.is_ready();
-        result
-    }
-}
-
 /// Message sent when a `HostIncomingBodyStream` is done to the
 /// `HostFutureTrailers` state.
 #[derive(Debug)]
@@ -172,11 +102,11 @@ enum StreamEnd {
 pub struct HostIncomingBodyStream {
     state: IncomingBodyStreamState,
     buffer: Bytes,
-    error: Option<wasmtime::Error>,
+    error: Option<Error>,
 }
 
 impl HostIncomingBodyStream {
-    fn record_frame(&mut self, frame: Option<Result<Frame<Bytes>, types::ErrorCode>>) {
+    fn record_frame(&mut self, frame: Option<Result<Frame<Bytes>, Error>>) {
         match frame {
             Some(Ok(frame)) => match frame.into_data() {
                 // A data frame was received, so queue up the buffered data for
@@ -206,7 +136,7 @@ impl HostIncomingBodyStream {
             // Destroy the body to terminate the stream while enqueueing the
             // error to get returned from the next call to `read`.
             Some(Err(e)) => {
-                self.error = Some(e.into());
+                self.error = Some(e);
                 self.state = IncomingBodyStreamState::Closed;
             }
 
@@ -251,7 +181,7 @@ impl InputStream for HostIncomingBodyStream {
             }
 
             if let Some(e) = self.error.take() {
-                return Err(StreamError::LastOperationFailed(e));
+                return Err(StreamError::LastOperationFailed(e.into()));
             }
 
             // Extract the body that we're reading from. If present perform a
@@ -326,7 +256,7 @@ pub enum HostFutureTrailers {
     ///
     /// Note that `Ok(None)` means that there were no trailers for this request
     /// while `Ok(Some(_))` means that trailers were found in the request.
-    Done(Result<Option<http::HeaderMap>, types::ErrorCode>),
+    Done(Result<Option<http::HeaderMap>, Error>),
 
     /// Trailers have been consumed by `future-trailers.get`.
     Consumed,
@@ -447,7 +377,7 @@ impl HostOutgoingBody {
         }
         impl Body for BodyImpl {
             type Data = Bytes;
-            type Error = types::ErrorCode;
+            type Error = Error;
             fn poll_frame(
                 mut self: Pin<&mut Self>,
                 cx: &mut Context<'_>,
@@ -470,7 +400,7 @@ impl HostOutgoingBody {
                                         Poll::Ready(Some(Ok(Frame::trailers(trailers))))
                                     }
                                     FinishMessage::Abort => {
-                                        Poll::Ready(Some(Err(types::ErrorCode::HttpProtocolError)))
+                                        Poll::Ready(Some(Err(Error::HttpProtocolError)))
                                     }
                                 },
                                 Poll::Ready(Err(RecvError { .. })) => Poll::Ready(None),

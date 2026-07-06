@@ -1,7 +1,8 @@
 //! Implementation of the `wasi:http/outgoing-handler` interface.
 
+use crate::WasiHttpCtxView;
 use crate::p2::{
-    HttpResult, WasiHttpCtxView,
+    HttpResult,
     bindings::http::{
         outgoing_handler,
         types::{self, Scheme},
@@ -72,12 +73,15 @@ impl outgoing_handler::Host for WasiHttpCtxView<'_> {
                 .map_err(|_| unreachable!("Infallible error"))
                 .boxed_unsync()
         });
+        let body = body.map_err(Into::into).boxed_unsync();
 
         let request = builder
             .body(body)
             .map_err(|err| internal_error(err.to_string()))?;
 
-        let future = self.hooks.send_request(request, opts);
+        let future = self
+            .hooks
+            .send_request(request, opts, Box::new(async { Ok(()) }));
         let future = wasmtime_wasi::runtime::spawn(async move {
             let (res, io) = Pin::from(future).await?;
             let io = wasmtime_wasi::runtime::spawn(async move {
@@ -88,6 +92,7 @@ impl outgoing_handler::Host for WasiHttpCtxView<'_> {
                     Err(e) => tracing::warn!("dropping error {e}"),
                 }
             });
+            let res = res.map(|b| b.boxed_unsync());
             Ok((res, io))
         });
 

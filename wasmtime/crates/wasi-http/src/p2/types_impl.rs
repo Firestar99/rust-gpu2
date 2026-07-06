@@ -1,14 +1,13 @@
 //! Implementation for the `wasi:http/types` interface.
 
-use crate::FieldMap;
-use crate::get_content_length;
 use crate::p2::bindings::http::types::{self, Method, Scheme, StatusCode, Trailers};
 use crate::p2::body::{HostFutureTrailers, HostIncomingBody, HostOutgoingBody, StreamContext};
 use crate::p2::types::{
     HostFutureIncomingResponse, HostIncomingRequest, HostIncomingResponse, HostOutgoingRequest,
     HostOutgoingResponse, HostResponseOutparam, remove_forbidden_headers,
 };
-use crate::p2::{HeaderError, HeaderResult, HttpError, HttpResult, WasiHttpCtxView};
+use crate::p2::{HeaderError, HeaderResult, HttpError, HttpResult};
+use crate::{FieldMap, WasiHttpCtxView, get_content_length};
 use http::{HeaderName, HeaderValue};
 use std::str::FromStr;
 use wasmtime::component::Resource;
@@ -242,8 +241,8 @@ impl types::HostOutgoingRequest for WasiHttpCtxView<'_> {
         &mut self,
         request: Resource<HostOutgoingRequest>,
     ) -> wasmtime::Result<Result<Resource<HostOutgoingBody>, ()>> {
-        let buffer_chunks = self.hooks.outgoing_body_buffer_chunks();
-        let chunk_size = self.hooks.outgoing_body_chunk_size();
+        let buffer_chunks = self.hooks.p2_outgoing_body_buffer_chunks();
+        let chunk_size = self.hooks.p2_outgoing_body_chunk_size();
         let req = self
             .table
             .get_mut(&request)
@@ -497,7 +496,10 @@ impl types::HostFutureTrailers for WasiHttpCtxView<'_> {
         let mut fields = match res {
             Ok(Some(fields)) => fields,
             Ok(None) => return Ok(Some(Ok(Ok(None)))),
-            Err(e) => return Ok(Some(Ok(Err(e)))),
+            Err(e) => {
+                let e = self.error_to_p2(e);
+                return Ok(Some(Ok(Err(e))));
+            }
         };
 
         remove_forbidden_headers(self.hooks, &mut fields);
@@ -560,8 +562,8 @@ impl types::HostOutgoingResponse for WasiHttpCtxView<'_> {
         &mut self,
         id: Resource<HostOutgoingResponse>,
     ) -> wasmtime::Result<Result<Resource<HostOutgoingBody>, ()>> {
-        let buffer_chunks = self.hooks.outgoing_body_buffer_chunks();
-        let chunk_size = self.hooks.outgoing_body_chunk_size();
+        let buffer_chunks = self.hooks.p2_outgoing_body_buffer_chunks();
+        let chunk_size = self.hooks.p2_outgoing_body_chunk_size();
         let resp = self.table.get_mut(&id)?;
 
         if resp.body.is_some() {
@@ -643,8 +645,7 @@ impl types::HostFutureIncomingResponse for WasiHttpCtxView<'_> {
             match std::mem::replace(resp, HostFutureIncomingResponse::Consumed).unwrap_ready() {
                 Ok(pair) => pair,
                 Err(e) => {
-                    // Trapping if it's not possible to downcast to an wasi-http error
-                    let e = e.downcast()?;
+                    let e = self.error_to_p2(e);
                     return Ok(Some(Ok(Err(e))));
                 }
             };
