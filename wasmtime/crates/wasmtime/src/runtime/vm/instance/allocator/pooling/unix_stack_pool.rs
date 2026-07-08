@@ -83,7 +83,7 @@ impl StackPool {
             async_stack_keep_resident: HostAlignedByteCount::new_rounded_up(
                 config.async_stack_keep_resident,
             )?,
-            index_allocator: SimpleIndexAllocator::new(config.limits.total_stacks),
+            index_allocator: SimpleIndexAllocator::new(config.limits.total_stacks)?,
         })
     }
 
@@ -208,16 +208,26 @@ impl StackPool {
         size_to_memset.byte_count()
     }
 
-    /// Deallocate a previously-allocated fiber.
+    /// Deallocate the previously-allocated fibers produced by `items`.
     ///
     /// # Safety
     ///
-    /// The fiber must have been allocated by this pool, must be in an allocated
-    /// state, and must never be used again.
+    /// The fibers must have been previously-allocated by this pool, must be
+    /// in an allocated state, and must never be used again.
     ///
-    /// The caller must have already called `zero_stack` on the fiber stack and
-    /// flushed any enqueued decommits for this stack's memory.
-    pub unsafe fn deallocate(&self, stack: wasmtime_fiber::FiberStack, bytes_resident: usize) {
+    /// The caller must have already called `zero_stack` on the fiber stacks
+    /// and flushed any enqueued decommits for these stacks' memories.
+    pub unsafe fn deallocate_many(
+        &self,
+        stacks: impl Iterator<Item = (wasmtime_fiber::FiberStack, usize)>,
+    ) {
+        self.index_allocator.free_many(
+            stacks
+                .map(|(stack, bytes_resident)| (SlotId(self.stack_index(&stack)), bytes_resident)),
+        );
+    }
+
+    fn stack_index(&self, stack: &wasmtime_fiber::FiberStack) -> u32 {
         assert!(stack.is_from_raw_parts());
 
         let top = stack
@@ -240,9 +250,7 @@ impl StackPool {
 
         let index = (start_of_stack - base) / self.stack_size.byte_count();
         assert!(index < self.max_stacks);
-        let index = u32::try_from(index).unwrap();
-
-        self.index_allocator.free(SlotId(index), bytes_resident);
+        u32::try_from(index).unwrap()
     }
 
     pub fn unused_warm_slots(&self) -> u32 {
@@ -299,10 +307,8 @@ mod tests {
 
         assert!(pool.allocate().is_err(), "allocation should fail");
 
-        for stack in stacks {
-            unsafe {
-                pool.deallocate(stack, 0);
-            }
+        unsafe {
+            pool.deallocate_many(stacks.into_iter().map(|stack| (stack, 0)));
         }
 
         assert_eq!(
