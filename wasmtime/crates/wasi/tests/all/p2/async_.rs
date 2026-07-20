@@ -8,13 +8,21 @@ use wasmtime_wasi::p2::add_to_linker_async;
 use wasmtime_wasi::p2::bindings::Command;
 
 async fn run(path: &str, with_builder: impl FnOnce(&mut WasiCtxBuilder)) -> Result<()> {
+    run_with_workspace_setup(path, |_| Ok(()), with_builder).await
+}
+
+async fn run_with_workspace_setup(
+    path: &str,
+    setup: impl FnOnce(&Path) -> Result<()>,
+    with_builder: impl FnOnce(&mut WasiCtxBuilder),
+) -> Result<()> {
     let path = Path::new(path);
     let name = path.file_stem().unwrap().to_str().unwrap();
     let engine = test_programs_artifacts::engine(|_config| {});
     let mut linker = Linker::new(&engine);
     add_to_linker_async(&mut linker)?;
 
-    let (mut store, _td) = Ctx::new(&engine, name, |builder| {
+    let (mut store, _td) = Ctx::new_with_workspace_setup(&engine, name, setup, |builder| {
         with_builder(builder);
         MyWasiCtx::new(builder.build())
     })?;
@@ -71,6 +79,16 @@ async fn p1_fd_filestat_get() {
 #[test_log::test(tokio::test(flavor = "multi_thread"))]
 async fn p1_fd_filestat_set() {
     run(P1_FD_FILESTAT_SET_COMPONENT, |_| {}).await.unwrap()
+}
+#[test_log::test(tokio::test(flavor = "multi_thread"))]
+async fn p1_stat_extreme_host_mtime() {
+    run_with_workspace_setup(
+        P1_STAT_EXTREME_HOST_MTIME_COMPONENT,
+        crate::store::prepare_extreme_mtime_fixture,
+        |_| {},
+    )
+    .await
+    .unwrap()
 }
 #[test_log::test(tokio::test(flavor = "multi_thread"))]
 async fn p1_fd_flags_set() {

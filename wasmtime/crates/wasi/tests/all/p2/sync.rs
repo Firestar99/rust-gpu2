@@ -8,6 +8,14 @@ use wasmtime_wasi::p2::add_to_linker_sync;
 use wasmtime_wasi::p2::bindings::sync::Command;
 
 fn run(path: &str, with_builder: impl Fn(&mut WasiCtxBuilder)) -> Result<()> {
+    run_with_workspace_setup(path, |_| Ok(()), with_builder)
+}
+
+fn run_with_workspace_setup(
+    path: &str,
+    setup: impl Fn(&Path) -> Result<()>,
+    with_builder: impl Fn(&mut WasiCtxBuilder),
+) -> Result<()> {
     let path = Path::new(path);
     let name = path.file_stem().unwrap().to_str().unwrap();
     let engine = test_programs_artifacts::engine(|_| {});
@@ -17,7 +25,7 @@ fn run(path: &str, with_builder: impl Fn(&mut WasiCtxBuilder)) -> Result<()> {
     let component = Component::from_file(&engine, path)?;
 
     for blocking in [false, true] {
-        let (mut store, _td) = Ctx::new(&engine, name, |builder| {
+        let (mut store, _td) = Ctx::new_with_workspace_setup(&engine, name, &setup, |builder| {
             with_builder(builder);
             builder.allow_blocking_current_thread(blocking);
             MyWasiCtx::new(builder.build())
@@ -75,6 +83,15 @@ fn p1_fd_filestat_get() {
 #[test_log::test]
 fn p1_fd_filestat_set() {
     run(P1_FD_FILESTAT_SET_COMPONENT, |_| {}).unwrap()
+}
+#[test_log::test]
+fn p1_stat_extreme_host_mtime() {
+    run_with_workspace_setup(
+        P1_STAT_EXTREME_HOST_MTIME_COMPONENT,
+        crate::store::prepare_extreme_mtime_fixture,
+        |_| {},
+    )
+    .unwrap()
 }
 #[test_log::test]
 fn p1_fd_flags_set() {

@@ -310,18 +310,22 @@ impl DescriptorStat {
     /// Creates a `DescriptorStat` from a `Metadata` plus the hard link
     /// count.
     fn new(meta: &Metadata, link_count: u64) -> Self {
-        fn datetime_from(t: std::time::SystemTime) -> Datetime {
-            // FIXME make this infallible or handle errors properly
-            Datetime::try_from(t).unwrap()
-        }
-
         Self {
             type_: meta.file_type().into(),
             link_count,
             size: meta.len(),
-            data_access_timestamp: meta.accessed().map(|t| datetime_from(t.into_std())).ok(),
-            data_modification_timestamp: meta.modified().map(|t| datetime_from(t.into_std())).ok(),
-            status_change_timestamp: meta.created().map(|t| datetime_from(t.into_std())).ok(),
+            data_access_timestamp: meta
+                .accessed()
+                .ok()
+                .and_then(|t| Datetime::try_from(t.into_std()).ok()),
+            data_modification_timestamp: meta
+                .modified()
+                .ok()
+                .and_then(|t| Datetime::try_from(t.into_std()).ok()),
+            status_change_timestamp: meta
+                .created()
+                .ok()
+                .and_then(|t| Datetime::try_from(t.into_std()).ok()),
         }
     }
 }
