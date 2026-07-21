@@ -63,6 +63,7 @@ fn empty_test_ops() -> GcOps {
             max_rec_groups: 5,
             max_types: 5,
             max_fields: 10,
+            array_length: 5,
         },
         ops: vec![],
         types: Types::new(),
@@ -83,6 +84,7 @@ fn test_ops(num_params: u32, num_globals: u32, table_size: u32) -> GcOps {
             max_rec_groups: 7,
             max_types: 10,
             max_fields: 10,
+            array_length: 5,
         },
         ops: vec![
             GcOp::NullExtern,
@@ -418,6 +420,7 @@ fn fixup_preserves_subtyping_within_same_rec_group() {
         max_rec_groups: 10,
         max_types: 10,
         max_fields: 10,
+        array_length: 5,
     };
 
     types.fixup(&limits, &mut Vec::new());
@@ -466,6 +469,7 @@ fn fixup_breaks_one_edge_in_multi_rec_group_type_cycle() {
         max_rec_groups: 10,
         max_types: 10,
         max_fields: 10,
+        array_length: 5,
     };
 
     types.fixup(&limits, &mut Vec::new());
@@ -819,6 +823,7 @@ fn cast_test_ops(ops: Vec<GcOp>) -> GcOps {
             max_rec_groups: 5,
             max_types: 10,
             max_fields: 10,
+            array_length: 5,
         },
         ops,
         types: Types::new(),
@@ -847,6 +852,7 @@ fn flat_cast_test_ops(ops: Vec<GcOp>) -> GcOps {
             max_rec_groups: 5,
             max_types: 10,
             max_fields: 10,
+            array_length: 5,
         },
         ops,
         types: Types::new(),
