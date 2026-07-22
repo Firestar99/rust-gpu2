@@ -512,6 +512,13 @@ impl WastTest {
             }
         }
 
+        if config.compiler == Compiler::Winch && cfg!(target_arch = "aarch64") {
+            let now_supported = ["misc_testsuite/winch/v128_load_lane_invalid_address.wast"];
+            if now_supported.iter().any(|part| self.path.ends_with(part)) {
+                return false;
+            }
+        }
+
         if config.compiler.should_fail(&self.config) {
             return true;
         }
@@ -565,7 +572,6 @@ impl WastTest {
                     "misc_testsuite/winch/issue-10460.wast",
                     "misc_testsuite/winch/replace_lane.wast",
                     "misc_testsuite/winch/simd_multivalue.wast",
-                    "misc_testsuite/winch/v128_load_lane_invalid_address.wast",
                     "spec_testsuite/proposals/annotations/simd_lane.wast",
                     "spec_testsuite/proposals/multi-memory/simd_memory-multi.wast",
                     "spec_testsuite/simd_address.wast",
