@@ -1144,6 +1144,14 @@ impl Assembler {
                     cond,
                 });
             }
+            OperandSize::S128 => {
+                self.emit(Inst::VecCSel {
+                    rd: rd.map(Into::into),
+                    rn: rn.into(),
+                    rm: rm.into(),
+                    cond,
+                });
+            }
             _ => todo!(),
         }
     }
