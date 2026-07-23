@@ -146,6 +146,17 @@ impl<'a, T: 'static> LowerContext<'a, T> {
     ) -> Result<usize> {
         assert!(self.allow_realloc);
 
+        // All calls to `realloc` options in the canonical ABI zero out the
+        // `context.{get,set}` slots for the duration of the call. This sort of
+        // fakes a "fresh thread" for each call, but this is the only observable
+        // state so nothing else needs adjusting. Note though that the original
+        // values are preserved still to get restored after this call.
+        #[cfg(feature = "component-model-async")]
+        let orig_context = core::mem::replace(
+            self.store.0.vm_store_context_mut().component_context_mut(),
+            Default::default(),
+        );
+
         let (component, store) = self.instance.component_and_store_mut(self.store.0);
         let instance = self.instance.id().get(store);
         let options = &component.env_component().options[self.options];
@@ -183,6 +194,14 @@ impl<'a, T: 'static> LowerContext<'a, T> {
             .is_none()
         {
             bail!("realloc return: beyond end of memory")
+        }
+
+        // Note that this restoration isn't part of a `Drop` guard which works
+        // because once a component traps it's locked-down and inaccessible, so
+        // it's ok if this isn't restored.
+        #[cfg(feature = "component-model-async")]
+        {
+            *self.store.0.vm_store_context_mut().component_context_mut() = orig_context;
         }
 
         Ok(result)
