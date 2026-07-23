@@ -72,12 +72,13 @@ use crate::{FxHashMap, FxHashSet};
 use crate::{
     cursor::{Cursor, FuncCursor},
     dominator_tree::DominatorTree,
+    flowgraph::ControlFlowGraph,
     inst_predicates::{inst_addr_offset_type, inst_store_data, visit_block_succs},
     ir::{AliasRegion, Block, Function, Inst, Opcode, Type, Value, immediates::Offset32},
     post_dominator_tree::PostDominatorTree,
     trace,
 };
-use cranelift_entity::EntitySet;
+use core::cmp::Ordering;
 use cranelift_entity::{EntityRef, SecondaryMap, packed_option::PackedOption};
 
 /// Determine whether this opcode behaves as a memory fence, i.e.,
@@ -109,8 +110,8 @@ enum AliasRegionsObserved {
 }
 
 /// Which alias region(s) can an instruction observe?
-fn alias_regions_observed(func: &Function, inst: Inst) -> AliasRegionsObserved {
-    let opcode = func.dfg.insts[inst].opcode();
+fn alias_regions_observed(func: &Function, inst: Inst, opcode: Opcode) -> AliasRegionsObserved {
+    debug_assert_eq!(func.dfg.insts[inst].opcode(), opcode);
     if opcode.is_return()
         || opcode.is_call()
         || opcode.can_trap()
@@ -136,16 +137,24 @@ fn alias_regions_observed(func: &Function, inst: Inst) -> AliasRegionsObserved {
     }
 }
 
+/// The last-store state for a single named alias region: the last store to the
+/// region (if any) and whether that region has been observed since.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct RegionState {
+    /// Last store to this region.
+    last_store: PackedOption<Inst>,
+
+    /// Whether this region has been observed since it was last stored to.
+    observed: bool,
+}
+
 /// For a given program point, the vector of last-store instruction
 /// indices for each disjoint category of abstract state.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LastStores {
-    /// Last store for each named alias region.
-    regions: SecondaryMap<AliasRegion, PackedOption<Inst>>,
-
-    /// Whether each region has been observed or not since it was last stored
-    /// to.
-    observed_regions: EntitySet<AliasRegion>,
+    /// Last store (and whether it has been observed) for each named alias
+    /// region.
+    regions: SecondaryMap<AliasRegion, RegionState>,
 
     /// Last store for memory accesses with no alias region.
     other: PackedOption<Inst>,
@@ -186,8 +195,10 @@ impl LastStores {
             if let Some(memflags) = func.dfg.insts[inst].memflags() {
                 match func.dfg.mem_flags[memflags].alias_region() {
                     Some(region) => {
-                        self.regions[region] = inst.into();
-                        self.observed_regions.remove(region);
+                        self.regions[region] = RegionState {
+                            last_store: inst.into(),
+                            observed: false,
+                        };
 
                         // And if this store can trap, then we need to observe
                         // all other alias regions, to ensure that their state
@@ -239,12 +250,12 @@ impl LastStores {
         // Everything else: determine which, if any, alias regions this
         // instruction observes.
         else {
-            match alias_regions_observed(func, inst) {
+            match alias_regions_observed(func, inst, opcode) {
                 AliasRegionsObserved::All => {
                     self.observed_all = true;
                 }
                 AliasRegionsObserved::Just(region) => {
-                    self.observed_regions.insert(region);
+                    self.regions[region].observed = true;
                     // NB: Because stores without regions may alias any other
                     // region, we have also observed the last-store in
                     // `self.other`.
@@ -260,9 +271,9 @@ impl LastStores {
 
     /// Mark all regions except for `excluding` (if given) as observed.
     fn observe_others(&mut self, excluding: Option<AliasRegion>) {
-        for (region, last_store) in self.regions.iter() {
-            if last_store.is_some() && excluding.is_none_or(|r| r != region) {
-                self.observed_regions.insert(region);
+        for (region, state) in self.regions.iter_mut() {
+            if state.last_store.is_some() && excluding.is_none_or(|r| r != region) {
+                state.observed = true;
             }
         }
         self.observed_other = true;
@@ -271,13 +282,14 @@ impl LastStores {
     /// Mark all regions whose last-store can trap as observed, except for
     /// `excluding`.
     fn observe_trapping_others(&mut self, excluding: AliasRegion, func: &Function) {
-        for (region, last_store) in self.regions.iter() {
+        for (region, state) in self.regions.iter_mut() {
             if region != excluding
-                && last_store
+                && state
+                    .last_store
                     .expand()
                     .is_some_and(|s| func.dfg.insts[s].memflags_trap_code(&func.dfg).is_some())
             {
-                self.observed_regions.insert(region);
+                state.observed = true;
             }
         }
 
@@ -290,7 +302,6 @@ impl LastStores {
     /// Handle memory fence-like instructions by clearing all analysis data.
     fn fence(&mut self, inst: Inst) {
         self.regions.clear();
-        self.observed_regions.clear();
         self.other = inst.into();
         self.observed_other = false;
         self.last_fence = inst.into();
@@ -304,15 +315,15 @@ impl LastStores {
             match func.dfg.mem_flags[memflags].alias_region() {
                 None => return (self.other, self.observed_all || self.observed_other),
                 Some(region) => {
-                    let region_store = self.regions[region];
+                    let region_state = self.regions[region];
                     // If the region has never been explicitly stored to,
                     // fall back to the last fence (which affects all regions).
-                    if region_store.is_none() {
+                    if region_state.last_store.is_none() {
                         return (self.last_fence, self.observed_all);
                     } else {
                         return (
-                            region_store,
-                            self.observed_all || self.observed_regions.contains(region),
+                            region_state.last_store,
+                            self.observed_all || region_state.observed,
                         );
                     }
                 }
@@ -338,7 +349,6 @@ impl LastStores {
         // field.
         let LastStores {
             regions,
-            observed_regions,
             other,
             observed_other,
             last_fence,
@@ -356,17 +366,6 @@ impl LastStores {
             old != new
         };
 
-        let union_set_entry = |a: &mut EntitySet<AliasRegion>,
-                               b: &EntitySet<AliasRegion>,
-                               region: AliasRegion|
-         -> bool {
-            if b.contains(region) {
-                a.insert(region)
-            } else {
-                false
-            }
-        };
-
         let union_bool = |a: &mut bool, b: bool| -> bool {
             let old = *a;
             *a = *a || b;
@@ -378,8 +377,12 @@ impl LastStores {
         let max_len = core::cmp::max(regions.keys().len(), rhs.regions.keys().len());
         for i in 0..max_len {
             let region = AliasRegion::new(i);
-            changed |= meet(&mut regions[region], rhs.regions[region]);
-            changed |= union_set_entry(observed_regions, &rhs.observed_regions, region);
+            let rhs_state = rhs.regions[region];
+            let state = &mut regions[region];
+            changed |= meet(&mut state.last_store, rhs_state.last_store);
+            // Union the observed bit: a region is observed after the meet if it
+            // was observed on either incoming path.
+            changed |= union_bool(&mut state.observed, rhs_state.observed);
         }
 
         changed |= meet(other, rhs.other);
@@ -447,7 +450,15 @@ pub struct AliasAnalysis<'a> {
     domtree: &'a DominatorTree,
 
     /// The post-dominator tree for the function.
-    post_dom_tree: &'a PostDominatorTree,
+    ///
+    /// This is computed lazily, on the first cross-block dead-store candidate,
+    /// because it is only ever consulted by dead-store elimination and only for
+    /// candidates whose two stores live in different blocks (because we can
+    /// easily test post-domination without building a post-dominator tree when
+    /// the two instructions are in the same block). The majority of functions
+    /// have no such dead-store candidates, so building it eagerly for every
+    /// function is a waste.
+    post_dom_tree: Option<PostDominatorTree>,
 
     /// Input state to a basic block.
     block_input: FxHashMap<Block, LastStores>,
@@ -462,23 +473,46 @@ pub struct AliasAnalysis<'a> {
 
 impl<'a> AliasAnalysis<'a> {
     /// Perform an alias analysis pass.
-    pub fn new(
-        func: &Function,
-        domtree: &'a DominatorTree,
-        post_dom_tree: &'a PostDominatorTree,
-    ) -> AliasAnalysis<'a> {
+    pub fn new(func: &Function, domtree: &'a DominatorTree) -> AliasAnalysis<'a> {
         trace!("alias analysis: input is:\n{:?}", func);
         assert!(domtree.is_valid());
-        assert!(post_dom_tree.is_valid());
         let mut analysis = AliasAnalysis {
             domtree,
-            post_dom_tree,
+            post_dom_tree: None,
             block_input: FxHashMap::default(),
             mem_values: FxHashMap::default(),
         };
 
         analysis.compute_block_input_states(func);
         analysis
+    }
+
+    /// Does `overwriter` post-dominate `maybe_dead`?
+    ///
+    /// That is, does every path from `maybe_dead` out of the function pass
+    /// through `overwriter`? Used as part of deciding whether `maybe_dead` is
+    /// truly a dead store.
+    fn post_dominates_maybe_dead_store(
+        &mut self,
+        func: &Function,
+        cfg: &ControlFlowGraph,
+        overwriter: Inst,
+        maybe_dead: Inst,
+    ) -> bool {
+        let overwriter_block = func.layout.inst_block(overwriter).unwrap();
+        let maybe_dead_block = func.layout.inst_block(maybe_dead).unwrap();
+
+        // When our instructions are in the same block, we do not need to
+        // force computation of the whole post-dominator tree: `overwriter`
+        // post-dominates `maybe_dead` iff `overwriter` is at or after
+        // `maybe_dead`.
+        if overwriter_block == maybe_dead_block {
+            return func.layout.pp_cmp(overwriter, maybe_dead) != Ordering::Less;
+        }
+
+        self.post_dom_tree
+            .get_or_insert_with(|| PostDominatorTree::with_cfg(cfg))
+            .post_dominates(overwriter, maybe_dead, &func.layout)
     }
 
     fn compute_block_input_states(&mut self, func: &Function) {
@@ -538,6 +572,7 @@ impl<'a> AliasAnalysis<'a> {
     pub fn process_inst(
         &mut self,
         func: &mut Function,
+        cfg: &ControlFlowGraph,
         state: &mut LastStores,
         inst: Inst,
     ) -> OptResult {
@@ -584,9 +619,7 @@ impl<'a> AliasAnalysis<'a> {
                         // The last store is only dead if all paths
                         // out of the function from it go through this
                         // instruction.
-                        && self
-                            .post_dom_tree
-                            .post_dominates(inst, last_store, &func.layout)
+                        && self.post_dominates_maybe_dead_store(func, cfg, inst, last_store)
                     {
                         trace!(
                             "  --> discovered dead store at {last_store}: {}",
@@ -709,13 +742,13 @@ impl<'a> AliasAnalysis<'a> {
     /// tracking because resolving some aliases may expose others
     /// (e.g. in cases of double-indirection with two separate chains
     /// of loads).
-    pub fn compute_and_update_aliases(&mut self, func: &mut Function) {
+    pub fn compute_and_update_aliases(&mut self, func: &mut Function, cfg: &ControlFlowGraph) {
         let mut pos = FuncCursor::new(func);
 
         while let Some(block) = pos.next_block() {
             let mut state = self.block_starting_state(block);
             while let Some(inst) = pos.next_inst() {
-                match self.process_inst(pos.func, &mut state, inst) {
+                match self.process_inst(pos.func, cfg, &mut state, inst) {
                     OptResult::None => {}
                     OptResult::AliasedLoad(replaced_result) => {
                         let result = pos.func.dfg.inst_results(inst)[0];
