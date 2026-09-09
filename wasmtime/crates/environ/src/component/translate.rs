@@ -544,6 +544,11 @@ impl<'a, 'data> Translator<'a, 'data> {
             &self.static_components,
         )?;
 
+        // Now that inlining has finished and the dataflow graph is complete,
+        // determine which fused adapters can skip their
+        // `{enter,exit}-sync-call` calls.
+        component.transparent_adapters = transparent_adapters(&component, self.types.types());
+
         self.partition_adapter_modules(&mut component);
 
         let translation =
