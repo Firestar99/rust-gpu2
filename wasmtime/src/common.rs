@@ -357,9 +357,6 @@ impl RunCommon {
             builder.initial_cwd(cwd);
         }
 
-        if self.common.wasi.listenfd == Some(true) {
-            bail!("components do not support --listenfd");
-        }
         for _ in self.compute_preopen_sockets()? {
             bail!("components do not support --tcplisten");
         }
