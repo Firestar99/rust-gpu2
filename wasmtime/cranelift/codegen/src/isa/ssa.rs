@@ -98,10 +98,6 @@ pub trait SsaInst: Clone + Debug {
     /// for tail calls that don't return to the caller.
     fn call_type(&self) -> CallType;
 
-    /// Should this instruction's clobber-list be included in the
-    /// clobber-set?
-    fn is_included_in_clobbers(&self) -> bool;
-
     /// Does this instruction access memory?
     fn is_mem_access(&self) -> bool;
 
@@ -424,22 +420,22 @@ impl<I: SsaInst + MachInstEmit> ABIMachineSpec for SsaAbi<I> {
         unreachable_stack()
     }
 
-    /// unreachable: no stack spilling
+    /// always called, noop
     fn gen_clobber_save(
         _call_conv: CallConv,
         _flags: &Flags,
         _frame_layout: &FrameLayout,
     ) -> SmallVec<[Self::I; 16]> {
-        unreachable!()
+        SmallVec::new()
     }
 
-    /// unreachable: no stack spilling
+    /// always called, noop
     fn gen_clobber_restore(
         _call_conv: CallConv,
         _flags: &Flags,
         _frame_layout: &FrameLayout,
     ) -> SmallVec<[Self::I; 16]> {
-        unreachable!()
+        SmallVec::new()
     }
 
     /// unreachable: requires [`ABIArg::StructArg`] but [`Self::compute_arg_locs`] always returns slots

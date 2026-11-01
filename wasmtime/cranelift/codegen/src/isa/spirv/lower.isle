@@ -1,0 +1,25 @@
+;; ----- lower
+(decl partial lower (Inst) InstOutput)
+
+;; ----- lower special
+(rule (lower (iconst ty (u64_from_imm64 n)))
+  (imm ty n))
+(rule (lower (return args))
+  (lower_return args))
+
+;; ----- lower AluRR
+(rule (lower (iadd ty a b))
+  (spv_iadd ty a b))
+(rule (lower (isub ty a b))
+  (spv_isub ty a b))
+(rule (lower (imul ty a b))
+  (spv_imul ty a b))
+
+
+
+;; lower_branch
+(decl partial lower_branch (Inst MachLabelSlice) Unit)
+
+; silly rule as at least one rule is required
+(rule (lower_branch (iconst _ _) _)
+  (unit))

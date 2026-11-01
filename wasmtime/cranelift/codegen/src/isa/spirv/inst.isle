@@ -1,0 +1,104 @@
+;; ----- SPV width types
+; Width describes the bit width of an operation *as requested*
+(type Width (enum
+  (I8)
+  (I16)
+  (I32)
+  (I64)
+))
+(decl width (Type) Width)
+(rule (width $I8) (Width.I8))
+(rule (width $I16) (Width.I16))
+(rule (width $I32) (Width.I32))
+(rule (width $I64) (Width.I64))
+(convert Type Width width)
+
+; TypeInt is the actual type emitted to SPIR-V. Width may be upcast or downcast to a different type depending on isa
+; flags to allow emulating i8/i16 in i32 with masking without requiring those features.
+(type TypeInt (enum
+;  (I8)
+;  (I16)
+  (I32)
+  (I64)
+))
+(decl type_int (Width) TypeInt)
+(rule (type_int (Width.I8)) (TypeInt.I32))
+(rule (type_int (Width.I16)) (TypeInt.I32))
+(rule (type_int (Width.I32)) (TypeInt.I32))
+(rule (type_int (Width.I64)) (TypeInt.I64))
+(convert Width TypeInt type_int)
+
+
+
+
+
+;; ----- Registers
+(decl alloc_ssa () Reg)
+(extern constructor alloc_ssa alloc_ssa)
+
+(type Def (struct Reg))
+
+(type Use (struct Reg))
+(decl value_to_use (Value) Use)
+(rule (value_to_use val) (Use val))
+(convert Value Use value_to_use)
+(decl output_use (Use) InstOutput)
+(rule (output_use (Use x)) (output_reg x))
+(convert Use InstOutput output_use)
+
+
+
+
+
+;; ----- Instructions
+(type MInst (enum
+  (Nop)
+  (Imm (ty TypeInt) (d Def) (imm u64))
+
+  ;; Alu
+  (AluRR
+    (op AluOpRR)
+    (d Def)
+    (a Use)
+    (b Use))
+
+  ;; control flow
+  (Return)
+
+  ;; pseudo-instructions
+  (Args
+    (args VecArgPair))
+  (Rets
+    (rets VecRetPair))
+))
+
+
+
+;; ----- Imm
+(decl imm (Width u64) Use)
+(rule (imm ty imm)
+  (let ((d Reg (alloc_ssa))
+        (_ Unit (emit (MInst.Imm ty (Def d) imm))))
+    (Use d)))
+
+
+
+;; ----- AluRR
+(type AluOpRR (enum
+  (IAdd)
+  (ISub)
+  (IMul)
+))
+
+(decl spv_alurr (Width AluOpRR Use Use) Use)
+(rule (spv_alurr ty op a b)
+  (let ((d Reg (alloc_ssa))
+        (_ Unit (emit (MInst.AluRR ty op (Def d) a b))))
+    (Use d)))
+
+(decl spv_iadd (Width Use Use) Use)
+(rule (spv_iadd ty a b) (spv_alurr ty (AluOpRR.IAdd) a b))
+(decl spv_isub (Width Use Use) Use)
+(rule (spv_isub ty a b) (spv_alurr ty (AluOpRR.ISub) a b))
+(decl spv_imul (Width Use Use) Use)
+(rule (spv_imul ty a b) (spv_alurr ty (AluOpRR.IMul) a b))
