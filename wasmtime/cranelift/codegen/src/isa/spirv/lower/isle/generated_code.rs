@@ -5,6 +5,7 @@
     unused_variables,
     irrefutable_let_patterns,
     clippy::clone_on_copy,
+    missing_docs,
     reason = "generated code"
 )]
 

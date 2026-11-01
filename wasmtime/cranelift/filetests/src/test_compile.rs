@@ -93,7 +93,8 @@ impl SubTest for TestCompile {
                         .map(|a| rspirv2::Word(u32::from_ne_bytes(*a)))
                         .collect();
                     let module = rspirv2::vec::InstVec::<CoreInstSet>::from_words_unchecked(words);
-                    format!("{}", module.dis(rspirv2::dis::DisOptions::simple()))
+                    let dis_ctx = cranelift_codegen::isa::spirv::inst::dis_context();
+                    format!("{}", module.dis(dis_ctx))
                 }
                 _ => {
                     let cs = isa.to_capstone().map_err(|e| anyhow::format_err!("{e}"))?;

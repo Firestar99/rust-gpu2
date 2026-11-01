@@ -1,3 +1,5 @@
+//! spirv instructions
+
 pub use crate::isa::spirv::inst::emit::EmitInfo;
 pub use crate::isa::spirv::lower::isle::generated_code::{Def, MInst as Inst, Use};
 use crate::isa::ssa::{SsaAbi, SsaInst};
@@ -9,9 +11,12 @@ use alloc::vec::Vec;
 use regalloc2::{OperandConstraint, OperandKind, OperandPos};
 
 mod emit;
-mod ty;
 mod reg;
+mod ty;
 
+pub use ty::*;
+
+/// [`Callee`] for spirv
 pub type SpirvCallee = Callee<SsaAbi<Inst>>;
 
 impl SsaInst for Inst {
@@ -74,7 +79,9 @@ impl SsaInst for Inst {
     }
 }
 
+/// [`OperandVisitor`] extensions for [`Def`] and [`Use`]
 pub trait SsaOperantVisitorExt: OperandVisitor {
+    /// register a definition
     fn ssa_def(&mut self, reg: &mut Def) {
         self.add_operand(
             &mut reg.0,
@@ -84,6 +91,7 @@ pub trait SsaOperantVisitorExt: OperandVisitor {
         );
     }
 
+    /// register a use
     fn ssa_use(&mut self, reg: &mut Use) {
         self.add_operand(
             &mut reg.0,
