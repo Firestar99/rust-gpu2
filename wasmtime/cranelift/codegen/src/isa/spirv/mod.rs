@@ -1,3 +1,5 @@
+//! The spirv backend
+
 use crate::dominator_tree::DominatorTree;
 use crate::ir::Function;
 use crate::isa::spirv::inst::{EmitInfo, Inst, SpirvCallee};
@@ -17,7 +19,7 @@ use alloc::{boxed::Box, vec::Vec};
 use cranelift_control::ControlPlane;
 use target_lexicon::{Architecture, Triple};
 
-mod inst;
+pub mod inst;
 mod lower;
 mod settings;
 
