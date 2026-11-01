@@ -9,6 +9,7 @@ use alloc::vec::Vec;
 use regalloc2::{OperandConstraint, OperandKind, OperandPos};
 
 mod emit;
+mod ty;
 
 pub type SpirvCallee = Callee<SsaAbi<Inst>>;
 
