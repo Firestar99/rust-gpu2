@@ -87,6 +87,7 @@ pub mod unwind;
 
 mod call_conv;
 mod winch;
+mod ssa;
 
 /// Returns a builder that can create a corresponding `TargetIsa`
 /// or `Err(LookupError::SupportDisabled)` if not enabled.
