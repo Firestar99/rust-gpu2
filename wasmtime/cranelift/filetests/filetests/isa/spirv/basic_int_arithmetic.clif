@@ -1,0 +1,49 @@
+test compile precise-output
+set unwind_info=false
+target spirv
+
+function %f1(i64, i64) -> i64 {
+block0(v0: i64, v1: i64):
+  v2 = iadd.i64 v0, v1
+  return v2
+}
+
+; VCode:
+; block0:
+;   Args { args: [ArgPair { vreg: Writable { reg: v192 }, preg: p0i }, ArgPair { vreg: Writable { reg: v193 }, preg: p1i }] }
+;   %195 = OpIAdd %u64 %192 %193
+;   Rets { rets: [RetPair { vreg: v195, preg: p0i }] }
+;
+; Disassembled:
+; %195 = OpIAdd %5 %192 %193
+
+function %f2(i64, i64) -> i64 {
+block0(v0: i64, v1: i64):
+  v2 = isub.i64 v0, v1
+  return v2
+}
+
+; VCode:
+; block0:
+;   Args { args: [ArgPair { vreg: Writable { reg: v192 }, preg: p0i }, ArgPair { vreg: Writable { reg: v193 }, preg: p1i }] }
+;   %195 = OpISub %u64 %192 %193
+;   Rets { rets: [RetPair { vreg: v195, preg: p0i }] }
+;
+; Disassembled:
+; %195 = OpISub %5 %192 %193
+
+function %f3(i64, i64) -> i64 {
+block0(v0: i64, v1: i64):
+  v2 = imul.i64 v0, v1
+  return v2
+}
+
+; VCode:
+; block0:
+;   Args { args: [ArgPair { vreg: Writable { reg: v192 }, preg: p0i }, ArgPair { vreg: Writable { reg: v193 }, preg: p1i }] }
+;   %195 = OpIMul %u64 %192 %193
+;   Rets { rets: [RetPair { vreg: v195, preg: p0i }] }
+;
+; Disassembled:
+; %195 = OpIMul %5 %192 %193
+

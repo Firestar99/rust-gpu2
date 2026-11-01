@@ -7,6 +7,7 @@ use anyhow::Result;
 use cranelift_codegen::ir;
 use cranelift_reader::{TestCommand, TestOption};
 use log::info;
+use rspirv2::core::inst_set::CoreInstSet;
 use std::borrow::Cow;
 
 struct TestCompile {
@@ -83,6 +84,16 @@ impl SubTest for TestCompile {
                     disas.hexdump(false).offsets(false);
                     pulley_interpreter::decode::Decoder::decode_all(&mut disas)?;
                     disas.disas().to_string()
+                }
+                target_lexicon::Architecture::Spirv => {
+                    let (chunks, rest) = compiled_code.buffer.data().as_chunks::<4>();
+                    assert_eq!(rest.len(), 0);
+                    let words = chunks
+                        .iter()
+                        .map(|a| rspirv2::Word(u32::from_ne_bytes(*a)))
+                        .collect();
+                    let module = rspirv2::vec::InstVec::<CoreInstSet>::from_words_unchecked(words);
+                    format!("{}", module.dis(rspirv2::dis::DisOptions::simple()))
                 }
                 _ => {
                     let cs = isa.to_capstone().map_err(|e| anyhow::format_err!("{e}"))?;
