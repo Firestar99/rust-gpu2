@@ -75,6 +75,8 @@ pub mod riscv64;
 
 #[cfg(feature = "s390x")]
 mod s390x;
+#[cfg(feature = "spirv")]
+mod spirv;
 
 #[cfg(feature = "pulley")]
 mod pulley32;
@@ -120,6 +122,7 @@ pub fn lookup(triple: Triple) -> Result<Builder, LookupError> {
         Architecture::Pulley64 | Architecture::Pulley64be => {
             isa_builder!(pulley64, (feature = "pulley"), triple)
         }
+        Architecture::Spirv { .. } => isa_builder!(spirv, (feature = "spirv"), triple),
         _ => Err(LookupError::Unsupported),
     }
 }
