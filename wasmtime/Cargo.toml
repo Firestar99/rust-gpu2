@@ -363,7 +363,7 @@ regalloc2 = "0.15.2"
 wasip1 = { version = "1.0.0", default-features = false }
 
 # cap-std family:
-target-lexicon = "0.13.5"
+target-lexicon = { path = "../target-lexicon" }
 rustix = "1.1.4"
 # wit-bindgen:
 wit-bindgen = { version = "0.62.0", default-features = false }

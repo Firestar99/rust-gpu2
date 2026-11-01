@@ -152,6 +152,7 @@ pub fn get_isle_compilations(
         .join("src")
         .join("isa")
         .join("pulley_shared");
+    let src_isa_spirv = codegen_crate_dir.join("src").join("isa").join("spirv");
 
     // This is a set of ISLE compilation units.
     //
@@ -284,6 +285,18 @@ pub fn get_isle_compilations(
                     pulley_gen.clone(),
                     clif_lower_isle.clone(),
                 ],
+            },
+            // The spirv instruction selector.
+            IsleCompilation {
+                name: "spirv".to_string(),
+                output: gen_dir.join("isle_spirv.rs"),
+                tracked_inputs: vec![
+                    prelude_isle.clone(),
+                    prelude_lower_isle.clone(),
+                    src_isa_spirv.join("inst.isle"),
+                    src_isa_spirv.join("lower.isle"),
+                ],
+                untracked_inputs: vec![numerics_isle.clone(), clif_lower_isle.clone()],
             },
         ],
     }

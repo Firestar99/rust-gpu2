@@ -1703,7 +1703,8 @@ impl<'func, I: VCodeInst> Lower<'func, I> {
         feature = "arm64",
         feature = "riscv64",
         feature = "s390x",
-        feature = "pulley"
+        feature = "pulley",
+        feature = "spirv",
     ))]
     pub fn increment_lowered_uses(&mut self, val: Value) {
         self.value_lowered_uses[val] += 1

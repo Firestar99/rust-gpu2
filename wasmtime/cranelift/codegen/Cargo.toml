@@ -104,11 +104,16 @@ pulley = [
 host-arch = []
 
 # Option to enable all architectures.
-all-arch = ["all-native-arch", "pulley"]
+all-arch = ["all-native-arch", "all-gpu-arch", "pulley"]
 
-# Option to enable all architectures that correspond to an actual native target
-# (that is, exclude Pulley).
+# Option to enable all CPU architectures that correspond to an actual native target
+# (that is, exclude Pulley and GPU archs).
 all-native-arch = ["x86", "arm64", "s390x", "riscv64"]
+
+# Option to enable all GPU architectures
+all-gpu-arch = ["spirv"]
+# SPIR-V is the bytecode for Vulkan shaders, and can easily be transpiled into other shader IRs.
+spirv = []
 
 # For dependent crates that want to serialize some parts of cranelift
 enable-serde = [
