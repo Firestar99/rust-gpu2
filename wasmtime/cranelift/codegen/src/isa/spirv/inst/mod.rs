@@ -11,6 +11,7 @@ use regalloc2::{OperandConstraint, OperandKind, OperandPos};
 
 mod emit;
 mod ty;
+mod reg;
 
 pub type SpirvCallee = Callee<SsaAbi<Inst>>;
 

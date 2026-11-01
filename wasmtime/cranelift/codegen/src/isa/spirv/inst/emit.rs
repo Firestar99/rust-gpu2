@@ -1,16 +1,17 @@
 use crate::ir::UserStackMap;
-use crate::isa::spirv::inst::{Def, Inst, SpirvCallee, Use};
+use crate::isa::spirv::inst::ty::dis_context;
+use crate::isa::spirv::inst::{Def, Inst, SpirvCallee};
 use crate::isa::spirv::lower::isle::generated_code::{AluOpRR, MInst, TypeInt};
 use crate::{FrameLayout, MachBuffer, MachInstEmit, MachInstEmitState, VCodeInst, settings};
 use alloc::string::String;
+use core::fmt::Write;
 use cranelift_control::ControlPlane;
 use rspirv2::Word;
 use rspirv2::binary::WordWriter;
 use rspirv2::core::inst::{OpConstant, OpIAdd, OpIMul, OpISub, OpNop, OpReturn};
 use rspirv2::core::inst_set::CoreInstSet;
 use rspirv2::inst::InstEncoding;
-use rspirv2::operand::{IdRef, IdResult, LiteralConst};
-use crate::isa::spirv::inst::ty::dis_context;
+use rspirv2::operand::LiteralConst;
 
 pub struct EmitInfo {
     #[expect(dead_code, reason = "may want to be used in the future")]
@@ -73,30 +74,32 @@ impl MachInstEmit for Inst {
 
     fn pretty_print_inst(&self, _state: &mut Self::State) -> String {
         match self {
-            MInst::Args { .. } | MInst::Rets { .. } => {
-                format!("{self:?}")
+            MInst::Args { args } => {
+                let mut f = String::from("Args { ");
+                for (i, arg) in args.iter().enumerate() {
+                    if i != 0 {
+                        write!(f, ", ").unwrap();
+                    }
+                    write!(f, "{}", Def(arg.vreg.to_reg())).unwrap();
+                }
+                write!(f, " }}").unwrap();
+                f
             }
-            _ => self.to_rspirv2().map_or_default(|inst| {
-                format!(
-                    "{}",
-                    inst.dis(&dis_context())
-                )
-            }),
+            MInst::Rets { rets } => {
+                let mut f = String::from("Rets { ");
+                for (i, ret) in rets.iter().enumerate() {
+                    if i != 0 {
+                        write!(f, ", ").unwrap();
+                    }
+                    write!(f, "{}", Def(ret.vreg)).unwrap();
+                }
+                write!(f, " }}").unwrap();
+                f
+            }
+            _ => self
+                .to_rspirv2()
+                .map_or_default(|inst| format!("{}", inst.dis(&dis_context()))),
         }
-    }
-}
-
-impl Def {
-    #[inline]
-    pub fn to_rspirv2(&self) -> IdResult {
-        IdResult(Word(self.0.to_virtual_reg().unwrap().index() as u32))
-    }
-}
-
-impl Use {
-    #[inline]
-    pub fn to_rspirv2(&self) -> IdRef {
-        IdRef(Def(self.0).to_rspirv2())
     }
 }
 
