@@ -10,9 +10,9 @@ block0(v0: i64, v1: i64):
 
 ; VCode:
 ; block0:
-;   Args { args: [ArgPair { vreg: Writable { reg: v192 }, preg: p0i }, ArgPair { vreg: Writable { reg: v193 }, preg: p1i }] }
+;   Args { %192, %193 }
 ;   %195 = OpIAdd %u64 %192 %193
-;   Rets { rets: [RetPair { vreg: v195, preg: p0i }] }
+;   Rets { %195 }
 ;
 ; Disassembled:
 ; %195 = OpIAdd %5 %192 %193
@@ -25,9 +25,9 @@ block0(v0: i64, v1: i64):
 
 ; VCode:
 ; block0:
-;   Args { args: [ArgPair { vreg: Writable { reg: v192 }, preg: p0i }, ArgPair { vreg: Writable { reg: v193 }, preg: p1i }] }
+;   Args { %192, %193 }
 ;   %195 = OpISub %u64 %192 %193
-;   Rets { rets: [RetPair { vreg: v195, preg: p0i }] }
+;   Rets { %195 }
 ;
 ; Disassembled:
 ; %195 = OpISub %5 %192 %193
@@ -40,9 +40,9 @@ block0(v0: i64, v1: i64):
 
 ; VCode:
 ; block0:
-;   Args { args: [ArgPair { vreg: Writable { reg: v192 }, preg: p0i }, ArgPair { vreg: Writable { reg: v193 }, preg: p1i }] }
+;   Args { %192, %193 }
 ;   %195 = OpIMul %u64 %192 %193
-;   Rets { rets: [RetPair { vreg: v195, preg: p0i }] }
+;   Rets { %195 }
 ;
 ; Disassembled:
 ; %195 = OpIMul %5 %192 %193
