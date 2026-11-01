@@ -14,7 +14,7 @@ block0(v0: i64, v1: i64):
 ;   OpReturn
 ;
 ; Disassembled:
-; %195 = OpIAdd %5 %192 %193
+; %195 = OpIAdd %u64 %192 %193
 ; OpReturn
 
 function %f2(i64, i64) -> i64 {
@@ -29,7 +29,7 @@ block0(v0: i64, v1: i64):
 ;   OpReturn
 ;
 ; Disassembled:
-; %195 = OpISub %5 %192 %193
+; %195 = OpISub %u64 %192 %193
 ; OpReturn
 
 function %f3(i64, i64) -> i64 {
@@ -44,6 +44,6 @@ block0(v0: i64, v1: i64):
 ;   OpReturn
 ;
 ; Disassembled:
-; %195 = OpIMul %5 %192 %193
+; %195 = OpIMul %u64 %192 %193
 ; OpReturn
 

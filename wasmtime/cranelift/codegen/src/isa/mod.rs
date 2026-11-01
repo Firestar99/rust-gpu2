@@ -76,7 +76,7 @@ pub mod riscv64;
 #[cfg(feature = "s390x")]
 mod s390x;
 #[cfg(feature = "spirv")]
-mod spirv;
+pub mod spirv;
 
 #[cfg(feature = "pulley")]
 mod pulley32;
