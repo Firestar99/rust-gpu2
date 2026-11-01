@@ -764,6 +764,7 @@ dependencies = [
  "log",
  "num_cpus",
  "pulley-interpreter",
+ "rspirv2",
  "serde",
  "serde_derive",
  "similar",
