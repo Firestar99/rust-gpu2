@@ -13,6 +13,7 @@ use rspirv2::core::inst_set::CoreInstSet;
 use rspirv2::inst::InstEncoding;
 use rspirv2::operand::LiteralConst;
 
+/// spirv EmitInfo
 pub struct EmitInfo {
     #[expect(dead_code, reason = "may want to be used in the future")]
     shared_flag: settings::Flags,
@@ -104,6 +105,7 @@ impl MachInstEmit for Inst {
 }
 
 impl Inst {
+    /// convert this instruction to `rspirv2`'s [`CoreInstSet`]
     pub fn to_rspirv2(&self) -> Option<CoreInstSet> {
         Some(match self {
             MInst::Nop => OpNop {}.into(),
