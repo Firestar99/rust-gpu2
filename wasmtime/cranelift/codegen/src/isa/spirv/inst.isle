@@ -16,8 +16,8 @@
 ; TypeInt is the actual type emitted to SPIR-V. Width may be upcast or downcast to a different type depending on isa
 ; flags to allow emulating i8/i16 in i32 with masking without requiring those features.
 (type TypeInt (enum
-;  (I8)
-;  (I16)
+  (I8)
+  (I16)
   (I32)
   (I64)
 ))
@@ -57,6 +57,7 @@
 
   ;; Alu
   (AluRR
+    (ty TypeInt)
     (op AluOpRR)
     (d Def)
     (a Use)

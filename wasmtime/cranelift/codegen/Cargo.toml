@@ -44,6 +44,7 @@ sha2 = { workspace = true, optional = true }
 rustc-hash = { workspace = true }
 wasmtime-core = { workspace = true }
 libm = { workspace = true }
+rspirv2 = { workspace = true, optional = true }
 # It is a goal of the cranelift-codegen crate to have minimal external dependencies.
 # Please don't add any unless they are essential to the task of creating binary
 # machine code. Integration tests that need external dependencies can be
@@ -113,7 +114,7 @@ all-native-arch = ["x86", "arm64", "s390x", "riscv64"]
 # Option to enable all GPU architectures
 all-gpu-arch = ["spirv"]
 # SPIR-V is the bytecode for Vulkan shaders, and can easily be transpiled into other shader IRs.
-spirv = []
+spirv = ["rspirv2"]
 
 # For dependent crates that want to serialize some parts of cranelift
 enable-serde = [
