@@ -1,6 +1,7 @@
 [workspace]
 members = [
 	"rust-gpu",
+	"waffle2clif",
 ]
 exclude = [
 	"wasmtime",
@@ -18,6 +19,7 @@ edition = "2024"
 cranelift-codegen = { path = "wasmtime/cranelift/codegen", default-features = false }
 cranelift-frontend = { path = "wasmtime/cranelift/frontend", default-features = false }
 target-lexicon = { path = "target-lexicon" }
+waffle2clif = { path = "waffle2clif" }
 waffle = { path = "waffle" }
 rspirv2 = "0.1.1"
 
