@@ -1,0 +1,16 @@
+[package]
+name = "waffle2cranelift"
+version = "0.1.0"
+description = "waffle to cranelift translation layer"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+keywords = ["cranelift", "wasm", "compiler"]
+
+[dependencies]
+waffle.workspace = true
+cranelift-codegen.workspace = true
+cranelift-frontend.workspace = true
+anyhow.workspace = true
+smallvec.workspace = true
