@@ -1,4 +1,5 @@
 use crate::{SmallValueVec, Translator};
+use anyhow::Context;
 use cranelift_codegen::ir::condcodes::{FloatCC, IntCC};
 use cranelift_codegen::ir::immediates::{Ieee32, Ieee64};
 use cranelift_codegen::ir::types::*;
@@ -14,9 +15,13 @@ impl Translator for Compute {
         bdr: &mut FunctionBuilder,
         op: Operator,
         args: &[Value],
-    ) -> Result<Option<SmallValueVec>, ()> {
+    ) -> anyhow::Result<Option<SmallValueVec>> {
         use waffle::Operator::*;
-        let arg = |i: usize| args.get(i).copied().ok_or(());
+        let arg = |i: usize| {
+            args.get(i)
+                .copied()
+                .with_context(|| format!("Missing arg {i}"))
+        };
 
         // IntCC
         let compare = match op {
@@ -54,6 +59,11 @@ impl Translator for Compute {
             return Ok(Some(SmallValueVec::from_iter([result])));
         }
 
+        let sextend =
+            |bdr: &mut FunctionBuilder, ty_out: Type, ty_from: Type| -> anyhow::Result<Value> {
+                let reduce = bdr.ins().ireduce(ty_from, arg(0)?);
+                Ok(bdr.ins().sextend(ty_out, reduce))
+            };
         let result = match op {
             // const
             I32Const { value } => bdr.ins().iconst(I32, value as u64 as i64),
@@ -126,11 +136,11 @@ impl Translator for Compute {
             F64PromoteF32 => bdr.ins().fpromote(F64, arg(0)?),
 
             // sextend
-            I32Extend8S => bdr.ins().sextend(I32, bdr.ins().ireduce(I8, arg(0)?)),
-            I32Extend16S => bdr.ins().sextend(I32, bdr.ins().ireduce(I16, arg(0)?)),
-            I64Extend8S => bdr.ins().sextend(I64, bdr.ins().ireduce(I8, arg(0)?)),
-            I64Extend16S => bdr.ins().sextend(I64, bdr.ins().ireduce(I16, arg(0)?)),
-            I64Extend32S => bdr.ins().sextend(I64, bdr.ins().ireduce(I32, arg(0)?)),
+            I32Extend8S => sextend(bdr, I32, I8)?,
+            I32Extend16S => sextend(bdr, I32, I16)?,
+            I64Extend8S => sextend(bdr, I64, I8)?,
+            I64Extend16S => sextend(bdr, I64, I16)?,
+            I64Extend32S => sextend(bdr, I64, I32)?,
 
             // bitcast
             F32ReinterpretI32 => bdr.ins().bitcast(F32, MemFlagsData::new(), arg(0)?),
