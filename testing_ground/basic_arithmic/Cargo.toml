@@ -1,0 +1,17 @@
+[package]
+name = "basic_arithmic"
+version = "0.1.0"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+waffle.workspace = true
+cranelift-codegen = { workspace = true, features = ["spirv"] }
+cranelift-frontend.workspace = true
+waffle2cranelift.workspace = true
+target-lexicon.workspace = true
+rspirv2.workspace = true
+anyhow.workspace = true

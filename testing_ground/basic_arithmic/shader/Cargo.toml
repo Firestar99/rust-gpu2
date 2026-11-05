@@ -1,0 +1,8 @@
+[package]
+name = "basic_arithmic_shader"
+version = "0.1.0"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+publish = false

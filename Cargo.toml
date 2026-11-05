@@ -1,6 +1,8 @@
 [workspace]
 members = [
-	"waffle2cranelift"
+	"waffle2cranelift",
+	"testing_ground/basic_arithmic",
+	"testing_ground/basic_arithmic/shader",
 ]
 exclude = [
 	"wasmtime",
@@ -17,7 +19,9 @@ edition = "2024"
 [workspace.dependencies]
 cranelift-codegen = { path = "wasmtime/cranelift/codegen", default-features = false }
 cranelift-frontend = { path = "wasmtime/cranelift/frontend", default-features = false }
+target-lexicon = { path = "target-lexicon" }
 waffle2cranelift = { path = "waffle2cranelift" }
+rspirv2 = "0.1.1"
 
 # external
 waffle = { version = "0.3.3", default-features = false, features = ["default"] }

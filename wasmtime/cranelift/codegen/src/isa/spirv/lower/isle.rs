@@ -5,12 +5,12 @@ use crate::isa::spirv::lower::isle::generated_code::MInst;
 use crate::machinst::Reg;
 use crate::machinst::{MachInst, isle::*};
 use crate::machinst::{VCodeConstant, VCodeConstantData};
+use crate::opts::{FloatCC, IntCC};
 use crate::{
     ir::{
         BlockCall, ExternalName, Inst, InstructionData, MemFlagsData, Opcode, TrapCode, Value,
         ValueList, immediates::*, types::*,
     },
-    isa::riscv64::inst::*,
     machinst::{ArgPair, CallArgList, CallRetList, InstOutput},
 };
 use alloc::boxed::Box;
@@ -35,7 +35,7 @@ impl<'a, 'b> SpirvIsleContext<'a, 'b, MInst, SpirvBackend> {
         Self { lower_ctx, backend }
     }
 
-    pub(crate) fn dfg(&self) -> &crate::ir::DataFlowGraph {
+    pub(crate) fn dfg(&self) -> &DataFlowGraph {
         &self.lower_ctx.f.dfg
     }
 }

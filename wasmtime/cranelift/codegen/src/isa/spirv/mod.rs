@@ -56,7 +56,7 @@ impl SpirvBackend {
         let emit_info = EmitInfo::new(self.flags.clone(), self.isa_flags.clone());
         let sigs = SigSet::new::<SsaAbi<Inst>>(func, &self.flags)?;
         let abi = SpirvCallee::new(func, self, &self.isa_flags, &sigs)?;
-        crate::machinst::compile::compile_ssa::<SpirvBackend>(
+        crate::machinst::compile_ssa::<SpirvBackend>(
             func,
             domtree,
             regalloc_ctx,

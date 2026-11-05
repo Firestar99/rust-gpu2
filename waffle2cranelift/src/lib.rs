@@ -6,7 +6,7 @@ use cranelift_codegen::ir::{
     UserFuncName,
 };
 use cranelift_codegen::isa::CallConv;
-use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext};
+use cranelift_frontend::FunctionBuilder;
 use smallvec::SmallVec;
 use waffle::entity::EntityRef;
 use waffle::{BlockTarget, Terminator, ValueDef};
@@ -35,7 +35,7 @@ pub trait Translator {
 /// Options for waffle to cranelift translation
 #[non_exhaustive]
 #[derive(Clone, Debug)]
-pub struct TranslatorOptions {
+pub struct LowerOptions {
     /// The namespace id to use in [`UserExternalName::new`].
     pub clif_namespace: u32,
     /// The [`CallConv`] to use for translated functions
@@ -44,7 +44,7 @@ pub struct TranslatorOptions {
     pub unreachable_trap_code: TrapCode,
 }
 
-impl Default for TranslatorOptions {
+impl Default for LowerOptions {
     fn default() -> Self {
         Self {
             clif_namespace: 0,
@@ -68,7 +68,7 @@ pub fn lower_type(ty: waffle::Type) -> anyhow::Result<ir::Type> {
 pub fn lower_func(
     module: &waffle::Module,
     func: waffle::Func,
-    opts: &TranslatorOptions,
+    opts: &LowerOptions,
 ) -> anyhow::Result<ir::Function> {
     let func = &module.funcs[func];
     let sig = &module.signatures[func.sig()];
@@ -95,19 +95,11 @@ pub fn lower_func(
 }
 
 pub fn lower_body(
-    func_bctx: &mut FunctionBuilderContext,
-    module: &waffle::Module,
-    func: waffle::Func,
+    body: &waffle::FunctionBody,
+    bdr: &mut FunctionBuilder,
     translator: impl Translator,
-    opts: &TranslatorOptions,
+    opts: &LowerOptions,
 ) -> anyhow::Result<()> {
-    let func_decl = &module.funcs[func];
-    let body = func_decl
-        .body()
-        .with_context(|| format!("Function must have a body: {:?}", func_decl))?;
-
-    let mut func = lower_func(module, func, opts)?;
-    let mut bdr = FunctionBuilder::new(&mut func, func_bctx);
     let b2b = body
         .blocks
         .iter()
@@ -132,7 +124,7 @@ pub fn lower_body(
                 ValueDef::Operator(waffle::Operator::Nop, _, _) => (),
                 &ValueDef::Operator(op, args_w, _) => {
                     let result = translator
-                        .lower(&mut bdr, op, args_c.setup(&v2v, &body.arg_pool[args_w]))?
+                        .lower(bdr, op, args_c.setup(&v2v, &body.arg_pool[args_w]))?
                         .with_context(|| format!("Operation {op} couldn't be lowered"))?;
                     v2v.set(result_w, result);
                 }
