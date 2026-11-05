@@ -6,3 +6,19 @@ authors.workspace = true
 repository.workspace = true
 license.workspace = true
 edition.workspace = true
+
+[features]
+default = ["cargo"]
+cargo = ["dep:escargot"]
+
+[dependencies]
+waffle.workspace = true
+cranelift-codegen = { workspace = true, features = ["spirv"] }
+cranelift-frontend.workspace = true
+waffle2clif.workspace = true
+target-lexicon.workspace = true
+rspirv2.workspace = true
+anyhow.workspace = true
+log.workspace = true
+smallvec.workspace = true
+escargot = { workspace = true, optional = true }

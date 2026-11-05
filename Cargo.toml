@@ -2,6 +2,8 @@
 members = [
 	"wasmsl",
 	"waffle2clif",
+	"examples/basic-compute",
+	"examples/basic-compute/shader",
 ]
 exclude = [
 	"wasmtime",
@@ -26,4 +28,7 @@ wasmsl = { path = "wasmsl" }
 # external
 anyhow = "1.0.104"
 smallvec = { version = "1.16.4", features = ["const_new", "const_generics", "union"] }
+env_logger = "0.11.11"
 rspirv2 = "0.1.1"
+log = "0.4.35"
+escargot = "1.0.1"
