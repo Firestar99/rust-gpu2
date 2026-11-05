@@ -2,6 +2,8 @@
 members = [
 	"rust-gpu",
 	"waffle2clif",
+	"testing_ground/basic_arithmic",
+	"testing_ground/basic_arithmic/shader",
 ]
 exclude = [
 	"wasmtime",
@@ -26,3 +28,4 @@ rspirv2 = "0.1.1"
 # external
 anyhow = "1.0.104"
 smallvec = { version = "1.16.4", features = ["const_new", "const_generics", "union"] }
+env_logger = "0.11.11"
