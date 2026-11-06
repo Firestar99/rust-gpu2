@@ -7,7 +7,7 @@ use rspirv2::core::inst_set::CoreInstSet;
 use rspirv2::dis::DisOptions;
 use rspirv2::vec::InstVec;
 use target_lexicon::{Architecture, Triple};
-use waffle::FrontendOptions;
+use waffle::{FrontendOptions, OptOptions};
 use waffle2cranelift::{Compute, LowerOptions, lower_body, lower_func};
 
 pub fn main() -> anyhow::Result<()> {
@@ -40,6 +40,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let mut module = waffle::Module::from_wasm_bytes(&wasm_bytes, &FrontendOptions::default())?;
     module.expand_all_funcs()?;
+    module.per_func_body(|body| body.optimize(&OptOptions::default()));
 
     let mut bdr_ctx = FunctionBuilderContext::default();
     for (func, func_decl) in module.funcs.entries() {
