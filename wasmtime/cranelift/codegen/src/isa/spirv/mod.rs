@@ -2,21 +2,23 @@
 
 use crate::dominator_tree::DominatorTree;
 use crate::ir::Function;
-use crate::isa::spirv::inst::{EmitInfo, Inst, SpirvCallee};
+use crate::isa::spirv::inst::{EmitInfo, Inst, SpirvCallee, SpvLabel};
+use crate::isa::spirv::lower::isle::SpirvLowerBackend;
 use crate::isa::spirv::settings as spirv_settings;
 use crate::isa::ssa::SsaAbi;
 use crate::isa::unwind::systemv::RegisterMappingError;
 use crate::isa::{Builder, FunctionAlignment, IsaFlagsHashKey, OwnedTargetIsa, TargetIsa};
-use crate::machinst::{SigSet, VCode};
+use crate::machinst::{BlockLoweringOrder, SigSet, VCode};
 use crate::settings::{self as shared_settings};
 use crate::{
     CodegenError, CodegenResult, CompiledCode, CompiledCodeStencil, MachTextSectionBuilder, Reg,
-    TextSectionBuilder, ir,
+    TextSectionBuilder, ir, timing, trace,
 };
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 use alloc::{boxed::Box, vec::Vec};
 use cranelift_control::ControlPlane;
+use cranelift_entity::SecondaryMap;
 use target_lexicon::{Architecture, Triple};
 
 pub mod inst;
@@ -48,24 +50,48 @@ impl SpirvBackend {
     /// finalizes branches. The result is ready for binary emission.
     fn compile_vcode(
         &self,
-        func: &Function,
+        f: &Function,
         domtree: &DominatorTree,
         regalloc_ctx: &mut regalloc2::Ctx,
         ctrl_plane: &mut ControlPlane,
     ) -> CodegenResult<VCode<Inst>> {
         let emit_info = EmitInfo::new(self.flags.clone(), self.isa_flags.clone());
-        let sigs = SigSet::new::<SsaAbi<Inst>>(func, &self.flags)?;
-        let abi = SpirvCallee::new(func, self, &self.isa_flags, &sigs)?;
-        crate::machinst::compile_ssa::<SpirvBackend>(
-            func,
-            domtree,
-            regalloc_ctx,
-            self,
+        let sigs = SigSet::new::<SsaAbi<Inst>>(f, &self.flags)?;
+        let abi = SpirvCallee::new(f, self, &self.isa_flags, &sigs)?;
+
+        // lower ctx
+        let block_order = BlockLoweringOrder::new(f, domtree, ctrl_plane);
+        let mut lower = crate::machinst::Lower::new(
+            f,
             abi,
             emit_info,
+            block_order,
             sigs,
-            ctrl_plane,
-        )
+            self.flags().clone(),
+        )?;
+        let b = SpirvLowerBackend::new(self, &mut lower);
+
+        // lower
+        let vcode = {
+            log::debug!(
+                "Number of CLIF instructions to lower: {}",
+                f.dfg.num_insts()
+            );
+            log::debug!("Number of CLIF blocks to lower: {}", f.dfg.num_blocks());
+
+            let _tt = timing::vcode_lower();
+            lower.lower(&b, ctrl_plane)?
+        };
+
+        log::debug!(
+            "Number of lowered vcode instructions: {}",
+            vcode.num_insts()
+        );
+        log::debug!("Number of lowered vcode blocks: {}", vcode.num_blocks());
+        trace!("vcode from lowering: \n{:?}", vcode);
+
+        crate::machinst::fake_regalloc(&vcode, &mut regalloc_ctx.output);
+        Ok(vcode)
     }
 }
 

@@ -518,6 +518,10 @@ impl<'func, I: VCodeInst> Lower<'func, I> {
         })
     }
 
+    pub fn block_order(&self) -> &BlockLoweringOrder {
+        self.vcode.block_order()
+    }
+
     pub fn sigs(&self) -> &SigSet {
         self.vcode.sigs()
     }

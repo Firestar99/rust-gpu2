@@ -19,36 +19,13 @@ use alloc::vec::Vec;
 use cranelift_entity::SecondaryMap;
 use regalloc2::PReg;
 use smallvec::SmallVec;
+use crate::settings::Flags;
 
 pub mod generated_code;
 
 type VecArgPair = Vec<ArgPair>;
 
-pub(crate) struct SpirvIsleContext<'a, 'b, I, B>
-where
-    I: VCodeInst,
-    B: LowerBackend,
-{
-    pub lower_ctx: &'a mut Lower<'b, I>,
-    pub backend: &'a B,
-    pub labels: SecondaryMap<MachLabel, Option<SpvLabel>>,
-}
-
-impl<'a, 'b> SpirvIsleContext<'a, 'b, MInst, SpirvBackend> {
-    fn new(lower_ctx: &'a mut Lower<'b, MInst>, backend: &'a SpirvBackend) -> Self {
-        Self {
-            lower_ctx,
-            backend,
-            labels: SecondaryMap::with_default(None),
-        }
-    }
-
-    pub(crate) fn dfg(&self) -> &DataFlowGraph {
-        &self.lower_ctx.f.dfg
-    }
-}
-
-impl generated_code::Context for SpirvIsleContext<'_, '_, MInst, SpirvBackend> {
+impl<'a> generated_code::Context for IsleContext<'_, '_, MInst, SpirvLowerBackend<'a>> {
     isle_lower_prelude_methods!();
 
     #[inline]
@@ -58,7 +35,7 @@ impl generated_code::Context for SpirvIsleContext<'_, '_, MInst, SpirvBackend> {
 
     #[inline]
     fn alloc_ssa(&mut self) -> Reg {
-        self.lower_ctx.alloc_tmp(I32).only_reg().unwrap().to_reg()
+        alloc_ssa(self.lower_ctx)
     }
 
     fn block_call_uses(&mut self, arg0: BlockCall) -> VecUse {
@@ -72,27 +49,57 @@ impl generated_code::Context for SpirvIsleContext<'_, '_, MInst, SpirvBackend> {
     }
 
     fn spv_label(&mut self, arg0: MachLabel) -> SpvLabel {
-        self.labels[arg0].clone().expect("unknown label")
+        self.backend.labels.get(arg0).unwrap().clone()
     }
 }
 
-/// The main entry point for lowering with ISLE.
-pub(crate) fn lower(
-    lower_ctx: &mut Lower<MInst>,
-    backend: &SpirvBackend,
-    inst: Inst,
-) -> Option<InstOutput> {
-    let mut isle_ctx = SpirvIsleContext::new(lower_ctx, backend);
-    generated_code::constructor_lower(&mut isle_ctx, inst)
+fn alloc_ssa(lower: &mut Lower<MInst>) -> Reg {
+    lower.alloc_tmp(I32).only_reg().unwrap().to_reg()
 }
 
-/// The main entry point for branch lowering with ISLE.
-pub(crate) fn lower_branch(
-    lower_ctx: &mut Lower<MInst>,
-    backend: &SpirvBackend,
-    branch: Inst,
-    targets: &[MachLabel],
-) -> Option<()> {
-    let mut isle_ctx = SpirvIsleContext::new(lower_ctx, backend);
-    generated_code::constructor_lower_branch(&mut isle_ctx, branch, targets)
+pub struct SpirvLowerBackend<'a> {
+    pub b: &'a SpirvBackend,
+    pub labels: SecondaryMap<MachLabel, SpvLabel>,
+}
+
+impl<'a> SpirvLowerBackend<'a> {
+    pub fn new(b: &'a SpirvBackend, lower: &mut Lower<MInst>) -> Self {
+        let num_blocks = lower.block_order().lowered_order().len();
+        let labels = SecondaryMap::from(
+            (0..num_blocks)
+                .map(|i| SpvLabel(alloc_ssa(lower)))
+                .collect::<Vec<_>>(),
+        );
+        Self { b, labels }
+    }
+
+    // required by isle_lower_prelude_methods!()
+    pub fn flags(&self) -> &Flags {
+        self.b.flags()
+    }
+}
+
+impl LowerBackend for SpirvLowerBackend<'_> {
+    type MInst = MInst;
+
+    fn lower(&self, lower_ctx: &mut Lower<MInst>, inst: Inst) -> Option<InstOutput> {
+        let mut isle_ctx = IsleContext {
+            lower_ctx,
+            backend: self,
+        };
+        generated_code::constructor_lower(&mut isle_ctx, inst)
+    }
+
+    fn lower_branch(
+        &self,
+        lower_ctx: &mut Lower<MInst>,
+        branch: Inst,
+        targets: &[MachLabel],
+    ) -> Option<()> {
+        let mut isle_ctx = IsleContext {
+            lower_ctx,
+            backend: self,
+        };
+        generated_code::constructor_lower_branch(&mut isle_ctx, branch, targets)
+    }
 }
