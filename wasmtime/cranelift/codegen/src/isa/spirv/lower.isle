@@ -19,7 +19,5 @@
 
 ;; lower_branch
 (decl partial lower_branch (Inst MachLabelSlice) Unit)
-
-; silly rule as at least one rule is required
-(rule (lower_branch (iconst _ _) _)
-  (unit))
+(rule (lower_branch (jump block_call) (single_target label))
+  (emit_side_effect (spv_jump label (block_call_uses block_call))))
