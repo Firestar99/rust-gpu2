@@ -1,7 +1,7 @@
 //! spirv instructions
 
 pub use crate::isa::spirv::inst::emit::EmitInfo;
-pub use crate::isa::spirv::lower::isle::generated_code::{Def, MInst as Inst, Use};
+pub use crate::isa::spirv::lower::isle::generated_code::{Def, MInst as Inst, SpvLabel, Use};
 use crate::isa::ssa::{SsaAbi, SsaInst};
 use crate::machinst::{
     ArgPair, CallType, Callee, MachTerminator, OperandVisitor, OperandVisitorImpl, RetPair,
@@ -18,6 +18,8 @@ pub use ty::*;
 
 /// [`Callee`] for spirv
 pub type SpirvCallee = Callee<SsaAbi<Inst>>;
+/// A Vec of [`Use`]
+pub type VecUse = Vec<Use>;
 
 impl SsaInst for Inst {
     type F = super::spirv_settings::Flags;
@@ -54,6 +56,7 @@ impl SsaInst for Inst {
     fn is_term(&self) -> MachTerminator {
         match self {
             Inst::Return | Inst::Rets { .. } => MachTerminator::Ret,
+            Inst::Jump { .. } => MachTerminator::Branch,
             _ => MachTerminator::None,
         }
     }
@@ -115,6 +118,11 @@ impl Inst {
                 v.ssa_use(b);
             }
             Inst::Return => {}
+            Inst::Jump { args, .. } => {
+                for arg in args {
+                    v.ssa_use(arg);
+                }
+            }
 
             // since SSA IRs don't have physical register, these just forward their virtual ones
             Inst::Args { args } => {
