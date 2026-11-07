@@ -46,6 +46,13 @@
 (rule (output_use (Use x)) (output_reg x))
 (convert Use InstOutput output_use)
 
+(type VecUse (primitive VecUse))
+(decl block_call_uses (BlockCall) VecUse)
+(extern constructor block_call_uses block_call_uses)
+
+(type SpvLabel (struct Reg))
+(decl spv_label (MachLabel) SpvLabel)
+(extern constructor spv_label spv_label)
 
 
 
@@ -65,6 +72,9 @@
 
   ;; control flow
   (Return)
+  (Jump
+    (label SpvLabel)
+    (args VecUse))
 
   ;; pseudo-instructions
   (Args
@@ -103,3 +113,11 @@
 (rule (spv_isub ty a b) (spv_alurr ty (AluOpRR.ISub) a b))
 (decl spv_imul (Width Use Use) Use)
 (rule (spv_imul ty a b) (spv_alurr ty (AluOpRR.IMul) a b))
+
+
+
+;; ----- Terminator
+
+(decl spv_jump (MachLabel VecUse) SideEffectNoResult)
+(rule (spv_jump label args)
+  (SideEffectNoResult.Inst (MInst.Jump (spv_label label) args)))
