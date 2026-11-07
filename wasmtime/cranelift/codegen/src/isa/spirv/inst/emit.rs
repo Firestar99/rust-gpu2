@@ -8,10 +8,10 @@ use core::fmt::Write;
 use cranelift_control::ControlPlane;
 use rspirv2::Word;
 use rspirv2::binary::WordWriter;
-use rspirv2::core::inst::{OpConstant, OpIAdd, OpIMul, OpISub, OpNop, OpReturn};
+use rspirv2::core::inst::{OpBranch, OpConstant, OpIAdd, OpIMul, OpISub, OpNop, OpReturn};
 use rspirv2::core::inst_set::CoreInstSet;
 use rspirv2::inst::InstEncoding;
-use rspirv2::operand::LiteralConst;
+use rspirv2::operand::{IdRef, LiteralConst};
 
 /// spirv EmitInfo
 pub struct EmitInfo {
@@ -148,6 +148,14 @@ impl Inst {
                 }
             }
             MInst::Return => OpReturn {}.into(),
+            MInst::Jump { label, args } => {
+                // TODO args?
+                let _ = args;
+                OpBranch {
+                    target_label: IdRef(label.to_rspirv2()),
+                }
+                .into()
+            }
             MInst::Args { .. } | MInst::Rets { .. } => return None,
         })
     }
