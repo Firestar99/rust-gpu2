@@ -213,6 +213,7 @@ impl FunctionBody {
     pub fn optimize(&mut self, opts: &OptOptions) {
         let cfg = crate::cfg::CFGInfo::new(self);
         crate::passes::basic_opt::basic_opt(self, &cfg, opts);
+        crate::passes::merge_blocks::run(self);
         crate::passes::empty_blocks::run(self);
     }
 
