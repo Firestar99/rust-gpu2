@@ -106,7 +106,7 @@ pub fn lower_body(
         .map(|_| bdr.create_block())
         .collect::<Vec<_>>();
 
-    let mut v2v = V2V::new(body.values.len());
+    let mut v2v = V2V::new(body);
     let mut args_c = CachedValueVec::default();
     let cfg = waffle::cfg::CFGInfo::new(body);
     for block_i in cfg.rpo.values().copied() {
@@ -133,10 +133,7 @@ pub fn lower_body(
                 &ValueDef::PickOutput(value_w, i, _) => {
                     v2v.set_single(result_w, v2v.get(value_w)[i as usize])
                 }
-                &ValueDef::Alias(value_w) => {
-                    v2v.alias(result_w, value_w);
-                }
-                ValueDef::Placeholder(_) | ValueDef::None => {
+                &ValueDef::Alias(_) | ValueDef::Placeholder(_) | ValueDef::None => {
                     panic!("Value {result_w} has impossible ValueDef {inst_w:?}");
                 }
             }
@@ -202,15 +199,17 @@ pub fn lower_body(
 
 /// [`waffle::Value`] to cranelift [`ir::Value`] SecondaryMap that can be filled in on the go.
 #[derive(Clone, Debug)]
-pub struct V2V {
+pub struct V2V<'a> {
+    pub body: &'a waffle::FunctionBody,
     pub map: Vec<EntityList<ir::Value>>,
     pub pool: ListPool<ir::Value>,
 }
 
-impl V2V {
-    pub fn new(capacity: usize) -> Self {
+impl<'a> V2V<'a> {
+    pub fn new(body: &'a waffle::FunctionBody) -> Self {
         Self {
-            map: vec![EntityList::default(); capacity],
+            body,
+            map: vec![EntityList::default(); body.values.len()],
             pool: ListPool::default(),
         }
     }
@@ -224,6 +223,7 @@ impl V2V {
     }
 
     pub fn get(&self, key: waffle::Value) -> &[ir::Value] {
+        let key = self.body.resolve_alias(key);
         self.map[key.index()].as_slice(&self.pool)
     }
 
@@ -237,17 +237,17 @@ impl V2V {
         self.map[to.index()] = self.map[key.index()];
     }
 
-    pub fn block_args_iter<'a>(
+    pub fn block_args_iter<'b>(
         &self,
-        keys: impl IntoIterator<Item = &'a waffle::Value>,
+        keys: impl IntoIterator<Item = &'b waffle::Value>,
     ) -> impl Iterator<Item = BlockArg> {
         keys.into_iter()
             .map(|v| BlockArg::Value(self.get_single(*v)))
     }
 
-    pub fn block_args<'a>(
+    pub fn block_args<'b>(
         &self,
-        keys: impl IntoIterator<Item = &'a waffle::Value>,
+        keys: impl IntoIterator<Item = &'b waffle::Value>,
     ) -> SmallVec<[BlockArg; 8]> {
         self.block_args_iter(keys).collect()
     }
