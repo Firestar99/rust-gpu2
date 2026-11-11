@@ -1,0 +1,26 @@
+[workspace]
+members = [
+	"rust-gpu",
+]
+exclude = [
+	"wasmtime",
+	"target-lexicon",
+]
+resolver = "3"
+
+[workspace.package]
+authors = ["Firestar99 <firestar99@sydow.cloud>"]
+repository = "https://github.com/firestar99/rust-gpu2"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[workspace.dependencies]
+cranelift-codegen = { path = "wasmtime/cranelift/codegen", default-features = false }
+cranelift-frontend = { path = "wasmtime/cranelift/frontend", default-features = false }
+target-lexicon = { path = "target-lexicon" }
+waffle = { path = "waffle" }
+rspirv2 = "0.1.1"
+
+# external
+anyhow = "1.0.104"
+smallvec = { version = "1.16.4", features = ["const_new", "const_generics", "union"] }
