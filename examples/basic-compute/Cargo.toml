@@ -12,3 +12,4 @@ default-run = "basic-compute"
 anyhow.workspace = true
 env_logger.workspace = true
 wasmsl.workspace = true
+rspirv2.workspace = true
