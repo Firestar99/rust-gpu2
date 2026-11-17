@@ -1,9 +1,11 @@
+use crate::logical_layout::make_logical_layout_module;
 use anyhow::Context;
 use cranelift_codegen::settings;
 use cranelift_codegen::settings::Configurable;
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext};
 use rspirv2::core::inst_set::CoreInstSet;
 use rspirv2::dis::DisOptions;
+use rspirv2::module::Module;
 use rspirv2::vec::InstVec;
 use std::collections::HashSet;
 use target_lexicon::{Architecture, Triple};
@@ -11,6 +13,7 @@ use waffle2clif::{Compute, lower_body, lower_func};
 
 mod source;
 pub use source::*;
+pub mod logical_layout;
 
 /// The wasm to spirv compiler
 pub struct Compiler<S: Source> {
@@ -32,7 +35,7 @@ pub struct SpirvModule {
     /// The name of the entry point function
     pub name: String,
     /// The spirv module
-    pub module: InstVec<CoreInstSet>,
+    pub module: Module<CoreInstSet>,
 }
 
 impl<S: Source> Compiler<S> {
@@ -98,7 +101,7 @@ impl<S: Source> Compiler<S> {
                 };
 
                 // to rspirv2::InstVec
-                let mut inst_vec = {
+                let inst_vec = {
                     let (chunks, rest) = compiled_code.buffer.data().as_chunks::<4>();
                     assert_eq!(rest.len(), 0);
                     let inst_vec = InstVec::<CoreInstSet>::from_words_unchecked(
@@ -108,13 +111,7 @@ impl<S: Source> Compiler<S> {
                     inst_vec
                 };
 
-                // merge parts to make a proper module with the required logical layout
-                let module = {
-                    let mut module = cranelift_codegen::isa::spirv::inst::preamble();
-                    module.append(&mut inst_vec);
-                    module
-                };
-
+                let module = make_logical_layout_module(inst_vec);
                 Ok(SpirvModule {
                     name: func_decl.name().to_string(),
                     module,
