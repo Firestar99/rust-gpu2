@@ -23,6 +23,7 @@ use crate::{
         AtomicRmwOp, BlockCall, ExternalName, Inst, InstructionData, MemFlagsData, TrapCode, Value,
         ValueList, immediates::*, types::*,
     },
+    isa::unwind::UnwindInst,
     isa::aarch64::abi::AArch64MachineDeps,
     isa::aarch64::inst::SImm7Scaled,
     isa::aarch64::inst::args::{AtomicCAS128Args, ShiftOp, ShiftOpShiftImm},

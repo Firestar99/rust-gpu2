@@ -18,6 +18,7 @@ use crate::{
         AtomicRmwOp, BlockCall, ExternalName, Inst, InstructionData, MemFlagsData, Opcode,
         TrapCode, Value, ValueList, immediates::*, types::*,
     },
+    isa::unwind::UnwindInst,
     isa::riscv64::inst::*,
     machinst::{ArgPair, CallArgList, CallRetList, InstOutput},
 };

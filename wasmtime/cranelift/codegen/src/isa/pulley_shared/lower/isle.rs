@@ -38,12 +38,6 @@ type BoxExternalName = Box<ExternalName>;
 type UpperXRegSet = pulley_interpreter::UpperRegSet<pulley_interpreter::XReg>;
 type PcRelOffset = pulley_interpreter::PcRelOffset;
 
-#[expect(
-    unused_imports,
-    reason = "used on other backends, used here to suppress warning elsewhere"
-)]
-use crate::machinst::isle::UnwindInst as _;
-
 pub(crate) struct PulleyIsleContext<'a, 'b, I, B>
 where
     I: VCodeInst,
