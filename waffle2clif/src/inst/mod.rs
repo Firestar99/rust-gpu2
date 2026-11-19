@@ -4,6 +4,8 @@ use smallvec::SmallVec;
 
 mod compute;
 pub use compute::*;
+mod call;
+pub use call::*;
 
 /// A [`SmallVec`] of [`ir::Value`]
 pub type SmallValueVec = SmallVec<[ir::Value; 4]>;
@@ -22,6 +24,10 @@ pub trait Waffle2Clif: Sized {
         op: waffle::Operator,
         args: &[ir::Value],
     ) -> anyhow::Result<Option<SmallValueVec>>;
+
+    fn chain<B: Waffle2Clif>(&self, b: B) -> ChainedWaffle2Clif<&Self, B> {
+        ChainedWaffle2Clif(self, b)
+    }
 }
 
 impl<T: Waffle2Clif> Waffle2Clif for &T {
@@ -32,5 +38,21 @@ impl<T: Waffle2Clif> Waffle2Clif for &T {
         args: &[ir::Value],
     ) -> anyhow::Result<Option<SmallValueVec>> {
         T::lower(self, builder, op, args)
+    }
+}
+
+pub struct ChainedWaffle2Clif<A: Waffle2Clif, B: Waffle2Clif>(pub A, pub B);
+
+impl<A: Waffle2Clif, B: Waffle2Clif> Waffle2Clif for ChainedWaffle2Clif<A, B> {
+    fn lower(
+        &self,
+        builder: &mut FunctionBuilder,
+        op: waffle::Operator,
+        args: &[ir::Value],
+    ) -> anyhow::Result<Option<SmallValueVec>> {
+        match self.0.lower(&mut *builder, op, args) {
+            Ok(None) => self.1.lower(builder, op, args),
+            e => e,
+        }
     }
 }

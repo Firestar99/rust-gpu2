@@ -7,6 +7,7 @@ use rspirv2::module::Module;
 use rspirv2::vec::InstVec;
 use std::collections::HashSet;
 use target_lexicon::{Architecture, Triple};
+use waffle2clif::ExhaustiveInliner;
 
 mod source;
 pub use source::*;
@@ -81,6 +82,15 @@ impl<S: Source> Compiler<S> {
                     cg_ctx.func = module[func].clone();
                     log::trace!(
                         "entry point `{}` clif:\n{}",
+                        func_decl.name(),
+                        cg_ctx.func.display()
+                    );
+                    cg_ctx.inline(ExhaustiveInliner {
+                        module: &module,
+                        namespace: self.waffle2clif_opts.clif_namespace,
+                    })?;
+                    log::trace!(
+                        "entry point `{}` clif after inlining:\n{}",
                         func_decl.name(),
                         cg_ctx.func.display()
                     );

@@ -1,4 +1,4 @@
-use crate::{Waffle2Clif, lower_body, lower_sig};
+use crate::{LowerCall, Waffle2Clif, lower_body, lower_sig};
 use cranelift_codegen::ir;
 use cranelift_codegen::isa::{CallConv, TargetFrontendConfig};
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext};
@@ -90,6 +90,12 @@ impl Module {
                         sig.clone(),
                     );
                     let mut bdr = FunctionBuilder::new(&mut func_c, &mut bdr_ctx);
+                    let lower = lower.chain(LowerCall(|target| {
+                        Ok((
+                            opt.user_func_name(target),
+                            lower_sig(&module, module.funcs[target].sig(), opt.call_conv)?,
+                        ))
+                    }));
                     lower_body(body, &mut bdr, &lower, opt.unreachable_trap_code)?;
                     bdr.finalize(frontend_config);
                     log::trace!(
