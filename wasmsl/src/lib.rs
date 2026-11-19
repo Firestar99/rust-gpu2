@@ -2,7 +2,6 @@ use anyhow::Context;
 use cranelift_codegen::settings;
 use cranelift_codegen::settings::Configurable;
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext};
-use rspirv2::Word;
 use rspirv2::core::inst_set::CoreInstSet;
 use rspirv2::dis::DisOptions;
 use rspirv2::vec::InstVec;
@@ -103,10 +102,7 @@ impl<S: Source> Compiler<S> {
                     let (chunks, rest) = compiled_code.buffer.data().as_chunks::<4>();
                     assert_eq!(rest.len(), 0);
                     let inst_vec = InstVec::<CoreInstSet>::from_words_unchecked(
-                        chunks
-                            .iter()
-                            .map(|a| Word(u32::from_ne_bytes(*a)))
-                            .collect(),
+                        chunks.iter().copied().map(u32::from_ne_bytes).collect(),
                     );
                     log::debug!("spirv:\n{}", inst_vec.dis(DisOptions::default()));
                     inst_vec

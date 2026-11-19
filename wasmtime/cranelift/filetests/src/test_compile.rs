@@ -2,7 +2,7 @@
 //!
 //! The `compile` test command runs each function through the full code generator pipeline
 
-use crate::subtest::{Context, SubTest, check_precise_output, run_filecheck};
+use crate::subtest::{check_precise_output, run_filecheck, Context, SubTest};
 use anyhow::Result;
 use cranelift_codegen::ir;
 use cranelift_reader::{TestCommand, TestOption};
@@ -88,10 +88,7 @@ impl SubTest for TestCompile {
                 target_lexicon::Architecture::Spirv => {
                     let (chunks, rest) = compiled_code.buffer.data().as_chunks::<4>();
                     assert_eq!(rest.len(), 0);
-                    let words = chunks
-                        .iter()
-                        .map(|a| rspirv2::Word(u32::from_ne_bytes(*a)))
-                        .collect();
+                    let words = chunks.iter().copied().map(u32::from_ne_bytes).collect();
                     let module = rspirv2::vec::InstVec::<CoreInstSet>::from_words_unchecked(words);
                     let dis_ctx = cranelift_codegen::isa::spirv::inst::dis_context();
                     format!("{}", module.dis(dis_ctx))
