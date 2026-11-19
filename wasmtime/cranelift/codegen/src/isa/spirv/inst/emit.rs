@@ -69,7 +69,7 @@ impl MachInstEmit for Inst {
 
     fn emit(&self, code: &mut MachBuffer<Self>, _info: &Self::Info, _state: &mut Self::State) {
         if let Some(inst) = self.to_rspirv2() {
-            inst.encode(&mut MachWordWriter(code)).unwrap()
+            inst.encode(&mut MachWordWriter(code))
         }
     }
 
@@ -158,13 +158,11 @@ pub struct MachWordWriter<'a, T: VCodeInst>(pub &'a mut MachBuffer<T>);
 impl<'a, T: VCodeInst> WordWriter for MachWordWriter<'a, T> {
     #[inline]
     fn write(&mut self, word: Word) {
-        self.0.put4(word.0)
+        self.0.put4(word)
     }
 
     #[inline]
     fn write_iter(&mut self, iter: impl IntoIterator<Item = Word>) {
-        for word in iter {
-            self.0.put4(word.0)
-        }
+        self.0.extend(iter.into_iter().flat_map(u32::to_ne_bytes))
     }
 }

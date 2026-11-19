@@ -1,6 +1,5 @@
 use crate::isa::spirv::inst::{Def, Use};
 use core::fmt::{Display, Formatter};
-use rspirv2::Word;
 use rspirv2::operand::{IdRef, IdResult};
 
 impl Def {
@@ -13,7 +12,7 @@ impl Def {
     /// convert to `rspirv2`'s [`IdResult`]
     #[inline]
     pub fn to_rspirv2(&self) -> IdResult {
-        IdResult(Word(self.index()))
+        IdResult(self.index())
     }
 }
 

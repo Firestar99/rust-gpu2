@@ -851,9 +851,9 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "rspirv2"
-version = "0.1.1+sdk-1.4.363"
+version = "0.2.0+sdk-1.4.363"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28187882d61160c135ff90bbe4f88266f7a3dcef4186fd3e6d35d6b6f7dc2a27"
+checksum = "4a8d459295d19daacdfe104d9436a15ecccc339193ec6c59511fc680febe99c5"
 dependencies = [
  "bitflags 2.13.2",
  "profiling",
@@ -863,9 +863,9 @@ dependencies = [
 
 [[package]]
 name = "rspirv2-types"
-version = "0.1.1+sdk-1.4.363"
+version = "0.2.0+sdk-1.4.363"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43038ea224c6be7900ae1d738bb47956aa623b6ee6199ce9c7ec734a26ad5579"
+checksum = "d796199a6d53fd150eb000465f3487bf8df71b59c6dedd4a363e1576ac1a524d"
 dependencies = [
  "anstyle",
  "bitflags 2.13.2",

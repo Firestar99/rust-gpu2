@@ -1,24 +1,25 @@
 use crate::isa::spirv::lower::isle::generated_code::TypeInt;
-use rspirv2::Word;
 use rspirv2::core::inst::{OpTypeBool, OpTypeInt, OpTypeVoid};
 use rspirv2::core::inst_set::CoreInstSet;
 use rspirv2::dis::{DisContext, DisOptions};
 use rspirv2::operand::{IdResult, IdResultType, LiteralInteger};
 use rspirv2::vec::InstVec;
 
+// Note that IdResult `0` is reserved and must not be used.
+
 /// The id of the [`OpTypeVoid`] declaration in the [`preamble`]
-pub const SPIRV_VOID: IdResultType = IdResultType(IdResult(Word(0)));
+pub const SPIRV_VOID: IdResultType = IdResultType(IdResult(1));
 
 /// The id of the [`OpTypeBool`] declaration in the [`preamble`]
-pub const SPIRV_BOOL: IdResultType = IdResultType(IdResult(Word(1)));
+pub const SPIRV_BOOL: IdResultType = IdResultType(IdResult(2));
 /// The id of the `i8` declaration in the [`preamble`]
-pub const SPIRV_I8: IdResultType = IdResultType(IdResult(Word(2)));
+pub const SPIRV_I8: IdResultType = IdResultType(IdResult(3));
 /// The id of the `i16` declaration in the [`preamble`]
-pub const SPIRV_I16: IdResultType = IdResultType(IdResult(Word(3)));
+pub const SPIRV_I16: IdResultType = IdResultType(IdResult(4));
 /// The id of the `i32` declaration in the [`preamble`]
-pub const SPIRV_I32: IdResultType = IdResultType(IdResult(Word(4)));
+pub const SPIRV_I32: IdResultType = IdResultType(IdResult(5));
 /// The id of the `i64` declaration in the [`preamble`]
-pub const SPIRV_I64: IdResultType = IdResultType(IdResult(Word(5)));
+pub const SPIRV_I64: IdResultType = IdResultType(IdResult(6));
 
 impl TypeInt {
     /// All [`TypeInt`] variants
