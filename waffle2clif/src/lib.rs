@@ -6,3 +6,5 @@ mod body;
 pub use body::*;
 mod module;
 pub use module::*;
+mod exhaustive_inline;
+pub use exhaustive_inline::*;
