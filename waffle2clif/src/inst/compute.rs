@@ -1,4 +1,4 @@
-use crate::{SmallValueVec, Translator};
+use crate::{SmallValueVec, Waffle2Clif};
 use anyhow::Context;
 use cranelift_codegen::ir::condcodes::{FloatCC, IntCC};
 use cranelift_codegen::ir::immediates::{Ieee32, Ieee64};
@@ -9,7 +9,7 @@ use waffle::Operator;
 
 pub struct Compute;
 
-impl Translator for Compute {
+impl Waffle2Clif for Compute {
     fn lower(
         &self,
         bdr: &mut FunctionBuilder,

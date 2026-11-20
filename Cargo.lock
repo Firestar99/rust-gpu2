@@ -1132,6 +1132,7 @@ dependencies = [
  "anyhow",
  "cranelift-codegen",
  "cranelift-frontend",
+ "log",
  "smallvec",
  "waffle",
 ]
