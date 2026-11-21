@@ -7,6 +7,7 @@ use crate::machinst::Reg;
 use crate::machinst::{MachInst, isle::*};
 use crate::machinst::{VCodeConstant, VCodeConstantData};
 use crate::opts::{FloatCC, IntCC};
+use crate::settings::Flags;
 use crate::{
     ir::{
         BlockCall, ExternalName, Inst, InstructionData, MemFlagsData, Opcode, TrapCode, Value,
@@ -19,7 +20,6 @@ use alloc::vec::Vec;
 use cranelift_entity::SecondaryMap;
 use regalloc2::PReg;
 use smallvec::SmallVec;
-use crate::settings::Flags;
 
 pub mod generated_code;
 
@@ -67,7 +67,7 @@ impl<'a> SpirvLowerBackend<'a> {
         let num_blocks = lower.block_order().lowered_order().len();
         let labels = SecondaryMap::from(
             (0..num_blocks)
-                .map(|_| SpvLabel(alloc_ssa(lower)))
+                .map(|i| SpvLabel::new(i))
                 .collect::<Vec<_>>(),
         );
         Self { b, labels }

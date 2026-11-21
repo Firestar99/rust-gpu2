@@ -76,6 +76,11 @@ pub trait SsaInst: Clone + Debug {
     /// SSA: only used within wasmtime for debugging
     fn gen_nop_units() -> Vec<Vec<u8>>;
 
+    /// Generate an instruction that must appear at the beginning of a basic
+    /// block, if any. Note that the return value must not be subject to
+    /// register allocation.
+    fn gen_block_start(block: MachLabel) -> Option<Self>;
+
     /// Return the registers referenced by this machine instruction along with
     /// the modes of reference (use, def, modify).
     fn get_operands(&mut self, collector: &mut impl OperandVisitor);
@@ -189,6 +194,14 @@ impl<I: SsaInst + MachInstEmit> MachInst for I {
 
     fn is_safepoint(&self) -> bool {
         <I as SsaInst>::is_safepoint(self)
+    }
+
+    fn gen_block_start(
+        block: MachLabel,
+        _is_indirect_branch_target: bool,
+        _is_forward_edge_cfi_enabled: bool,
+    ) -> Option<Self> {
+        <I as SsaInst>::gen_block_start(block)
     }
 
     fn function_alignment() -> FunctionAlignment {

@@ -72,6 +72,8 @@
 
   ;; control flow
   (Return)
+
+  (Label SpvLabel)
   (Jump
     (label SpvLabel)
     (args VecUse))

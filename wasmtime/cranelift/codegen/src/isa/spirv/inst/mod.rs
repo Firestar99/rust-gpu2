@@ -1,5 +1,6 @@
 //! spirv instructions
 
+use crate::MachLabel;
 pub use crate::isa::spirv::inst::emit::EmitInfo;
 pub use crate::isa::spirv::lower::isle::generated_code::{Def, MInst as Inst, SpvLabel, Use};
 use crate::isa::ssa::{SsaAbi, SsaInst};
@@ -8,6 +9,7 @@ use crate::machinst::{
     SmallInstVec,
 };
 use alloc::vec::Vec;
+use cranelift_entity::EntityRef;
 use regalloc2::{OperandConstraint, OperandKind, OperandPos};
 
 mod emit;
@@ -49,6 +51,10 @@ impl SsaInst for Inst {
         Vec::new()
     }
 
+    fn gen_block_start(block: MachLabel) -> Option<Self> {
+        Some(Inst::Label(SpvLabel::new(block.index())))
+    }
+
     fn get_operands(&mut self, collector: &mut impl OperandVisitor) {
         Inst::get_operands(self, collector)
     }
@@ -66,7 +72,7 @@ impl SsaInst for Inst {
     }
 
     fn is_args(&self) -> bool {
-        matches!(self, Inst::Args {..})
+        matches!(self, Inst::Args { .. })
     }
 
     fn call_type(&self) -> CallType {
@@ -118,6 +124,7 @@ impl Inst {
                 v.ssa_use(b);
             }
             Inst::Return => {}
+            Inst::Label(_) => {}
             Inst::Jump { args, .. } => {
                 for arg in args {
                     v.ssa_use(arg);

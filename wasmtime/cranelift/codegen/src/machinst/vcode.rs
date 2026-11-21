@@ -892,6 +892,7 @@ impl<I: VCodeInst> VCode<I> {
             }
 
             if let Some(block_start) = I::gen_block_start(
+                MachLabel::from_block(block),
                 self.block_order.is_indirect_branch_target(block),
                 is_forward_edge_cfi_enabled,
             ) {
